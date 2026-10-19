@@ -1825,6 +1825,12 @@ whenReady(function init(){
     URL.revokeObjectURL(workerUrl);
 
     const conn = await db.connect();
+
+    // FIX: tell DuckDB-Wasm where its home directory is before loading extensions.
+    // Without this, INSTALL spatial fails with:
+    //   "IO Error: Can't find the home directory at '/home/web_user'"
+    await conn.query("SET home_directory = '/tmp';");
+
     await conn.query('INSTALL spatial');
     await conn.query('LOAD spatial');
     await conn.query('SET geometry_always_xy = true');
