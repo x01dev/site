@@ -1820,7 +1820,7 @@ whenReady(function init(){
     if (!duckdbModule){
       // Use the dev build that fixed the home‑directory / extension‑autoload
       // bug present in 1.28.0. See duckdb-wasm discussion #1818.
-      duckdbModule = await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.1-dev106/+esm');
+      duckdbModule = await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.1-dev106.0/+esm');
     }
     const duckdb = duckdbModule;
     const bundles = duckdb.getJsDelivrBundles();
