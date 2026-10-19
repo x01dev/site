@@ -1,0 +1,2133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HailPath — National County Threat Console</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050a10;--panel:#08111b;--panel2:#0b1622;
+  --line:rgba(120,200,255,.14);--line2:rgba(120,200,255,.32);
+  --ink:#dceaf5;--mute:#7c93a8;--dim:#546a7d;
+  --cyan:#5ee7ff;--amber:#ffc857;--red:#ff4d6d;--green:#3ddc84;--violet:#b18cff;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+#map{position:absolute;inset:0;z-index:0;background:#1a2330}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+#boot{position:fixed;inset:0;z-index:9999;background:var(--bg);display:grid;place-items:center;transition:opacity .5s ease}
+#boot.gone{opacity:0;pointer-events:none}
+.boot-ring{width:46px;height:46px;border:1px solid rgba(94,231,255,.18);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px}
+.boot-txt{font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.3em;color:var(--cyan);text-align:center}
+.boot-txt span{display:block;margin-top:9px;color:var(--mute);font-size:9px;letter-spacing:.12em;line-height:1.6}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#topbar{position:absolute;z-index:800;top:14px;left:16px;right:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;pointer-events:none;flex-wrap:wrap}
+#topbar>*{pointer-events:auto}
+.brandbar{display:flex;align-items:center;gap:11px;padding:9px 14px 9px 10px;background:rgba(8,17,27,.92);border:1px solid var(--line);border-radius:3px;backdrop-filter:blur(12px);box-shadow:0 12px 30px rgba(0,0,0,.4)}
+.logo{width:26px;height:26px;border:1px solid rgba(94,231,255,.55);display:grid;place-items:center;color:var(--cyan);font:800 12px "JetBrains Mono",monospace;box-shadow:0 0 14px rgba(94,231,255,.22),inset 0 0 12px rgba(94,231,255,.08)}
+.brandtext b{display:block;font:800 12px/1 Manrope;letter-spacing:.2em;text-transform:uppercase}
+.brandtext b em{font-style:normal;color:var(--cyan)}
+.brandtext span{display:block;font:500 8px/1 "JetBrains Mono",monospace;letter-spacing:.22em;color:var(--mute);margin-top:5px}
+
+#searchCluster{display:flex;align-items:flex-start;gap:6px;flex:1;max-width:820px;min-width:260px}
+.search-box{position:relative;flex:1;min-width:0;background:rgba(8,17,27,.92);border:1px solid var(--line);border-radius:3px;padding:4px 6px;backdrop-filter:blur(12px);display:flex;align-items:center;gap:5px;transition:border-color .15s,box-shadow .15s}
+.search-box.focused{border-color:rgba(94,231,255,.55);box-shadow:0 0 18px rgba(94,231,255,.12)}
+.search-box.addr.focused{border-color:rgba(255,77,109,.55);box-shadow:0 0 18px rgba(255,77,109,.12)}
+.search-box input{background:transparent;border:0;color:var(--ink);font:500 10px/1.4 "JetBrains Mono",monospace;letter-spacing:.04em;padding:6px 4px;flex:1;min-width:0;outline:none}
+.search-box input::placeholder{color:var(--dim)}
+.search-icon{width:12px;height:12px;flex:none;color:var(--dim);transition:.15s}
+.search-box.focused .search-icon{color:var(--cyan)}
+.search-box.addr.focused .search-icon{color:var(--red)}
+.search-btn{background:rgba(94,231,255,.12);border:1px solid rgba(94,231,255,.35);color:var(--cyan);border-radius:2px;font:700 8px/1 "JetBrains Mono",monospace;letter-spacing:.12em;padding:6px 8px;cursor:pointer;white-space:nowrap}
+.search-btn:hover{background:rgba(94,231,255,.22)}
+.search-btn.addr{background:rgba(255,77,109,.10);border-color:rgba(255,77,109,.35);color:#ff8ea0}
+.search-btn.addr:hover{background:rgba(255,77,109,.22)}
+
+.ac-list{position:absolute;top:100%;left:0;right:0;margin-top:4px;background:rgba(8,17,27,.98);border:1px solid var(--line2);border-radius:3px;backdrop-filter:blur(14px);box-shadow:0 12px 32px rgba(0,0,0,.65);max-height:320px;overflow-y:auto;z-index:900;display:none;padding:2px 0}
+.ac-list.on{display:block}
+.ac-list::-webkit-scrollbar{width:6px}
+.ac-list::-webkit-scrollbar-thumb{background:rgba(94,231,255,.2);border-radius:3px}
+.ac-item{display:flex;align-items:center;gap:9px;padding:8px 11px;cursor:pointer;transition:.1s;border-left:2px solid transparent}
+.ac-item:hover,.ac-item.active{background:rgba(94,231,255,.08);border-left-color:var(--cyan)}
+.ac-item.addr:hover,.ac-item.addr.active{background:rgba(255,77,109,.08);border-left-color:#ff4d6d}
+.ac-dot{width:6px;height:6px;border-radius:50%;flex:none;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.ac-item.addr .ac-dot{background:#ff4d6d;box-shadow:0 0 6px #ff4d6d}
+.ac-text{flex:1;min-width:0;overflow:hidden}
+.ac-name{font:600 10.5px/1.25 Manrope;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-name mark{background:rgba(94,231,255,.28);color:var(--cyan);padding:0 1px;border-radius:1px}
+.ac-item.addr .ac-name mark{background:rgba(255,77,109,.26);color:#ff8ea0}
+.ac-sub{font:500 8px/1.3 "JetBrains Mono",monospace;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-tag{font:700 6.5px/1 "JetBrains Mono",monospace;letter-spacing:.12em;padding:3px 5px;border-radius:2px;flex:none;border:1px solid}
+.ac-tag.near{border-color:rgba(61,220,132,.45);color:var(--green);background:rgba(61,220,132,.08)}
+.ac-tag.far{border-color:var(--line);color:var(--dim)}
+.ac-empty{padding:14px 12px;text-align:center;font:500 9px/1.5 "JetBrains Mono",monospace;color:var(--mute);letter-spacing:.02em}
+.ac-loading{padding:10px 12px;text-align:center;font:500 9px/1 "JetBrains Mono",monospace;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
+
+.status-cluster{display:flex;align-items:center;gap:8px}
+#livePill{display:none;align-items:center;gap:6px;padding:9px 11px;background:rgba(8,17,27,.92);border:1px solid rgba(61,220,132,.32);border-radius:3px;font:700 9px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:var(--green)}
+#livePill.on{display:flex}
+#livePill i{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 9px var(--green);animation:blink 1.6s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+#clock{font:600 10px/1 "JetBrains Mono",monospace;letter-spacing:.12em;color:var(--ink);padding:9px 11px;background:rgba(8,17,27,.92);border:1px solid var(--line);border-radius:3px}
+
+#panel{position:absolute;z-index:600;left:16px;top:84px;bottom:16px;width:408px;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(8,17,27,.97),rgba(5,10,16,.98));border:1px solid var(--line);border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 26px 70px rgba(0,0,0,.6),inset 0 0 80px rgba(94,231,255,.025);backdrop-filter:blur(14px);overflow:hidden;transition:transform .28s cubic-bezier(.4,0,.2,1)}
+#panel.closed{transform:translateX(-118%)}
+#panelReopen{position:absolute;z-index:599;left:16px;top:50%;transform:translateY(-50%);display:none;width:46px;height:46px;padding:0;background:rgba(8,17,27,.94);border:1px solid var(--line);border-radius:3px;backdrop-filter:blur(12px);cursor:pointer;color:var(--cyan);place-items:center;transition:.15s;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#panelReopen:hover{border-color:rgba(94,231,255,.55);box-shadow:0 0 24px rgba(94,231,255,.22);color:#fff}
+#panelReopen.on{display:grid}
+#panelReopen svg{width:18px;height:18px;display:block}
+#panelReopen .rc-badge{position:absolute;top:-7px;right:-7px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--cyan);color:#06131f;font:700 9px/20px "JetBrains Mono",monospace;text-align:center;box-shadow:0 0 12px rgba(94,231,255,.6);display:none}
+#panelReopen.has-badge .rc-badge{display:block}
+
+.corner{position:absolute;width:13px;height:13px;border-color:var(--cyan);opacity:.55;pointer-events:none;z-index:2}
+.corner.tl{top:-1px;left:-1px;border-top:1px solid;border-left:1px solid}
+.corner.tr{top:-1px;right:-1px;border-top:1px solid;border-right:1px solid}
+.corner.bl{bottom:-1px;left:-1px;border-bottom:1px solid;border-left:1px solid}
+.corner.br{bottom:-1px;right:-1px;border-bottom:1px solid;border-right:1px solid}
+.scan{position:absolute;inset:0;pointer-events:none;z-index:1;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);opacity:.7}
+.p-head{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:15px 17px 12px;border-bottom:1px solid var(--line)}
+.p-head .t{font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.26em;color:var(--mute);text-transform:uppercase}
+.p-head .n{font:800 16px/1 Manrope;letter-spacing:.04em;margin-top:6px}
+.p-head .n span{color:var(--cyan)}
+.p-head-right{display:flex;align-items:center;gap:10px}
+.p-close{background:rgba(255,255,255,.02);border:1px solid var(--line);color:var(--mute);width:26px;height:26px;border-radius:3px;cursor:pointer;font:700 14px/1 sans-serif;flex:none;transition:.15s;display:grid;place-items:center;padding:0}
+.p-close:hover{color:var(--red);border-color:rgba(255,77,109,.5);background:rgba(255,77,109,.12)}
+.p-body{position:relative;z-index:2;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-bottom:10px}
+.p-body::-webkit-scrollbar{width:6px}
+.p-body::-webkit-scrollbar-thumb{background:rgba(94,231,255,.18);border-radius:3px}
+.p-body::-webkit-scrollbar-track{background:transparent}
+
+.mode{display:grid;grid-template-columns:1fr 1fr;margin:12px 17px 0;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.mode button{background:transparent;border:0;color:var(--dim);font:700 9px/1 "JetBrains Mono",monospace;letter-spacing:.22em;padding:12px 0;cursor:pointer;transition:.15s}
+.mode button:hover{color:var(--ink)}
+.mode button.on{color:var(--cyan);background:linear-gradient(180deg,rgba(94,231,255,.16),rgba(94,231,255,.04));box-shadow:inset 0 -2px 0 var(--cyan)}
+.mode button.live.on{color:var(--green);background:linear-gradient(180deg,rgba(61,220,132,.16),rgba(61,220,132,.04));box-shadow:inset 0 -2px 0 var(--green)}
+
+.sec{padding:14px 17px 0}
+.sec h2{display:flex;align-items:center;gap:8px;margin:0 0 8px;font:600 8px/1 "JetBrains Mono",monospace;letter-spacing:.24em;color:var(--dim);text-transform:uppercase}
+.sec h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.chip{position:relative;font:600 9px/1 "JetBrains Mono",monospace;letter-spacing:.06em;padding:9px 0;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--mute);border-radius:3px;cursor:pointer;transition:.15s;white-space:nowrap}
+.chip:hover{border-color:var(--line2);color:var(--ink)}
+.chip.on{background:rgba(94,231,255,.11);border-color:rgba(94,231,255,.55);color:var(--cyan);box-shadow:0 0 16px rgba(94,231,255,.1)}
+.chip.livechip.on{background:rgba(61,220,132,.11);border-color:rgba(61,220,132,.55);color:var(--green);box-shadow:0 0 16px rgba(61,220,132,.1)}
+.hz{display:flex;align-items:center;justify-content:center;gap:6px}
+.hz::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--k);flex:none;box-shadow:0 0 8px var(--k)}
+.hz:not(.on){opacity:.55}
+.hz:not(.on)::before{background:transparent;border:1px solid var(--k);box-shadow:none}
+
+.slider-row{padding:6px 0 0}
+.day-slider{width:100%;height:3px;accent-color:var(--red);cursor:pointer;-webkit-appearance:none;appearance:none;background:rgba(255,77,109,.18);border-radius:2px;outline:none}
+.day-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:var(--red);cursor:pointer;box-shadow:0 0 10px rgba(255,77,109,.6);border:2px solid #08111b}
+.day-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--red);cursor:pointer;box-shadow:0 0 10px rgba(255,77,109,.6);border:2px solid #08111b}
+.slider-labels{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font:600 8px/1 "JetBrains Mono",monospace;letter-spacing:.14em;color:var(--dim)}
+.slider-value{color:var(--red);font:700 9px/1 "JetBrains Mono",monospace;padding:4px 7px;border:1px solid rgba(255,77,109,.4);border-radius:2px;background:rgba(255,77,109,.08)}
+
+.go-btn{width:100%;margin-top:10px;padding:11px 0;background:rgba(255,77,109,.06);border:1px solid rgba(255,77,109,.28);color:rgba(255,142,160,.85);font:700 9px/1 "JetBrains Mono",monospace;letter-spacing:.18em;border-radius:3px;cursor:pointer;transition:.15s}
+.go-btn:hover{background:rgba(255,77,109,.14);border-color:rgba(255,77,109,.5);color:#ff8ea0}
+.go-btn.on{background:rgba(255,77,109,.22);border-color:#ff4d6d;color:#ffb0bd;box-shadow:0 0 18px rgba(255,77,109,.22),inset 0 0 20px rgba(255,77,109,.08)}
+
+/* NEW: Detector bridge button */
+.detect-btn{width:100%;margin-top:12px;padding:13px 0;background:rgba(94,231,255,.08);border:1px solid rgba(94,231,255,.45);color:var(--cyan);font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.18em;border-radius:3px;cursor:pointer;transition:.18s}
+.detect-btn:hover{background:rgba(94,231,255,.18);border-color:rgba(94,231,255,.75);box-shadow:0 0 22px rgba(94,231,255,.22)}
+.detect-btn:active{transform:translateY(1px)}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);margin:14px 17px 0;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.stat{background:var(--panel);padding:10px 11px}
+.stat b{display:block;font:700 21px/1 "JetBrains Mono",monospace;letter-spacing:-.02em}
+.stat b.cyan{color:var(--cyan)}
+.stat b.amber{color:var(--amber)}
+.stat b.green{color:var(--green)}
+.stat small{display:block;margin-top:6px;font:600 7px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
+
+#status{padding:10px 17px 8px;font:500 8.5px/1.5 "JetBrains Mono",monospace;letter-spacing:.04em;color:var(--mute);min-height:2.6em}
+
+#list{list-style:none;margin:0;padding:0 12px 8px}
+.card{position:relative;display:flex;margin-bottom:6px;border:1px solid var(--line);background:linear-gradient(90deg,rgba(255,255,255,.032),rgba(255,255,255,.008));cursor:pointer;border-radius:3px;overflow:hidden;transition:border-color .15s,transform .15s,box-shadow .15s}
+.card:hover{border-color:var(--line2);transform:translateX(2px)}
+.card.sel{border-color:var(--c);box-shadow:0 0 20px rgba(94,231,255,.14)}
+.card .rail{width:3px;background:var(--c);flex:none;box-shadow:0 0 14px var(--c)}
+.card-body{flex:1;min-width:0;padding:10px 11px}
+.card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-top b{font:700 12.5px/1.2 Manrope;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{font:700 7.5px/1 "JetBrains Mono",monospace;letter-spacing:.13em;padding:3px 5px;border:1px solid var(--c);color:var(--c);border-radius:2px;white-space:nowrap;flex:none}
+.metrics{display:flex;gap:11px;margin-top:7px;flex-wrap:wrap}
+.metrics span{display:flex;align-items:center;gap:3px;font:500 8.5px/1 "JetBrains Mono",monospace;color:var(--mute)}
+.metrics b{color:var(--ink);font-weight:700}
+.metrics .arr{display:inline-block;width:8px;height:8px;color:var(--cyan)}
+.card-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;font:500 8px/1.3 "JetBrains Mono",monospace;color:var(--dim)}
+.card-meta .conf{color:var(--green)}
+.card-src{display:flex;gap:3px;flex-wrap:wrap;margin-top:6px}
+.src-tag{font:700 7px/1 "JetBrains Mono",monospace;letter-spacing:.12em;padding:2px 5px;border:1px solid var(--line);color:var(--dim);border-radius:2px}
+.src-tag.nws{border-color:rgba(94,231,255,.4);color:var(--cyan)}
+.src-tag.iem{border-color:rgba(255,200,87,.4);color:var(--amber)}
+.src-tag.lsr{border-color:rgba(61,220,132,.4);color:var(--green)}
+.src-tag.awc{border-color:rgba(177,140,255,.4);color:var(--violet)}
+.empty{padding:26px 12px;text-align:center;color:var(--mute);font:500 10px/1.7 "JetBrains Mono",monospace;letter-spacing:.02em}
+.empty b{color:var(--cyan);font-weight:700}
+.linkbtn{background:none;border:0;border-bottom:1px dotted var(--cyan);color:var(--cyan);font:600 9px/1 "JetBrains Mono",monospace;letter-spacing:.1em;padding:0 0 2px;cursor:pointer;margin-top:10px}
+
+.dx{margin:4px 17px 0;font:500 8px/1.6 "JetBrains Mono",monospace;color:var(--dim)}
+.dx summary{cursor:pointer;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);padding:4px 0}
+.dx i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px}
+.dx b{color:var(--ink);font-weight:600}
+.foot{padding:10px 17px 14px;color:var(--dim);font:500 7.5px/1.6 "JetBrains Mono",monospace;letter-spacing:.03em;border-top:1px solid var(--line);margin-top:8px}
+
+#maptools{position:absolute;z-index:650;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}
+.tool{width:38px;height:38px;display:grid;place-items:center;background:rgba(8,17,27,.92);border:1px solid var(--line);border-radius:3px;color:var(--dim);cursor:pointer;position:relative;transition:.15s;backdrop-filter:blur(10px)}
+.tool:hover{color:var(--ink);border-color:var(--line2)}
+.tool.on{color:var(--cyan);border-color:rgba(94,231,255,.5);box-shadow:0 0 16px rgba(94,231,255,.15)}
+.tool svg{width:16px;height:16px;display:block}
+.tool::after{content:attr(data-tip);position:absolute;right:46px;top:50%;transform:translateY(-50%);font:600 7.5px/1 "JetBrains Mono",monospace;letter-spacing:.14em;padding:6px 8px;background:#08111b;border:1px solid var(--line);color:var(--ink);white-space:nowrap;opacity:0;pointer-events:none;transition:.15s}
+.tool:hover::after{opacity:1}
+
+#basemapPicker{position:absolute;z-index:650;right:20px;bottom:180px;background:rgba(8,17,27,.92);border:1px solid var(--line);border-radius:3px;padding:6px;backdrop-filter:blur(10px);display:flex;flex-direction:column;gap:4px}
+.bmbtn{background:transparent;border:1px solid transparent;color:var(--mute);font:600 7.5px/1 "JetBrains Mono",monospace;letter-spacing:.12em;padding:7px 9px;text-align:left;cursor:pointer;border-radius:2px;transition:.15s;white-space:nowrap}
+.bmbtn:hover{color:var(--ink);border-color:var(--line)}
+.bmbtn.on{color:var(--cyan);border-color:rgba(94,231,255,.4);background:rgba(94,231,255,.08)}
+
+#legend{position:absolute;z-index:650;right:76px;bottom:36px;background:rgba(8,17,27,.92);border:1px solid var(--line);border-radius:3px;padding:9px 11px;font:600 7.5px/1.9 "JetBrains Mono",monospace;letter-spacing:.09em;color:var(--mute);backdrop-filter:blur(10px)}
+.leg-row{display:flex;align-items:center;gap:7px}
+.leg-dot{width:7px;height:7px;border-radius:50%;flex:none}
+
+#heatLegend{position:absolute;z-index:650;right:76px;bottom:36px;background:rgba(8,17,27,.92);border:1px solid rgba(255,77,109,.4);border-radius:3px;padding:10px 12px;backdrop-filter:blur(10px);display:none;width:180px}
+#heatLegend.on{display:block}
+.heat-title{font:700 7.5px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:#ff8ea0;margin-bottom:7px}
+.heat-bar{height:8px;border-radius:2px;background:linear-gradient(90deg, rgba(255,77,109,0.10) 0%, rgba(255,77,109,0.35) 40%, rgba(255,77,109,0.72) 75%, #ff4d6d 100%)}
+.heat-labels{display:flex;justify-content:space-between;margin-top:5px;font:600 7px/1 "JetBrains Mono",monospace;letter-spacing:.08em;color:var(--dim)}
+
+#timeline{position:absolute;z-index:650;left:50%;bottom:18px;transform:translateX(-50%);display:none;align-items:center;gap:11px;padding:8px 14px;background:rgba(8,17,27,.92);border:1px solid var(--line);border-radius:3px;font:600 8px/1 "JetBrains Mono",monospace;letter-spacing:.12em;color:var(--mute);backdrop-filter:blur(10px);min-width:340px}
+#timeline.on{display:flex}
+#tlRange{flex:1;min-width:180px;accent-color:var(--cyan);height:3px}
+#tlLabel{white-space:nowrap}
+
+#detail{position:absolute;z-index:660;right:70px;top:96px;width:360px;display:none;background:linear-gradient(180deg,rgba(8,17,27,.98),rgba(5,10,16,.99));border:1px solid var(--line2);border-radius:4px;box-shadow:0 24px 60px rgba(0,0,0,.65),0 0 40px rgba(94,231,255,.06);padding:15px;backdrop-filter:blur(14px);max-height:calc(100% - 130px);overflow-y:auto}
+#detail.on{display:block;animation:slideIn .22s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+.det-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.det-k{font:700 8px/1 "JetBrains Mono",monospace;letter-spacing:.22em;color:var(--dim);text-transform:uppercase}
+.det-title{font:800 17px/1.2 Manrope;margin-top:5px}
+.det-close{background:none;border:1px solid var(--line);color:var(--mute);width:24px;height:24px;border-radius:2px;cursor:pointer;font:700 12px/1 sans-serif;flex:none}
+.det-close:hover{color:var(--ink);border-color:var(--line2)}
+.riskbar{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin:12px 0 13px}
+.riskbar i{height:4px;background:rgba(255,255,255,.07);border-radius:1px}
+.riskbar i.on{background:var(--c);box-shadow:0 0 8px var(--c)}
+.det-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.det-cell{background:var(--panel);padding:9px 10px}
+.det-cell small{display:block;font:600 7px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
+.det-cell b{display:flex;align-items:center;gap:4px;font:700 15px/1 "JetBrains Mono",monospace;margin-top:5px}
+.det-cell b span{font:600 8px/1 "JetBrains Mono",monospace;color:var(--mute)}
+.det-cell .arr{width:12px;height:12px;color:var(--cyan)}
+.factors{display:flex;flex-wrap:wrap;gap:5px;margin-top:12px}
+.factor{font:600 7.5px/1 "JetBrains Mono",monospace;letter-spacing:.08em;padding:5px 7px;border:1px solid var(--line);border-radius:2px;color:var(--mute)}
+.factor.hot{border-color:rgba(255,77,109,.4);color:var(--red)}
+.factor.ok{border-color:rgba(61,220,132,.35);color:var(--green)}
+.det-src{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.det-meta{margin-top:11px;font:500 8px/1.6 "JetBrains Mono",monospace;color:var(--dim)}
+
+.agg-list{margin-top:12px;border:1px solid var(--line);border-radius:3px;max-height:280px;overflow-y:auto;background:rgba(0,0,0,.2)}
+.agg-list::-webkit-scrollbar{width:4px}
+.agg-list::-webkit-scrollbar-thumb{background:rgba(255,77,109,.25);border-radius:2px}
+.agg-event{display:flex;align-items:center;gap:8px;padding:9px 10px;border-bottom:1px solid var(--line);cursor:pointer;transition:.15s}
+.agg-event:last-child{border-bottom:0}
+.agg-event:hover{background:rgba(255,77,109,.06)}
+.agg-dot{width:6px;height:6px;border-radius:50%;flex:none}
+.agg-body{flex:1;min-width:0}
+.agg-title{font:600 10px/1.25 Manrope;color:var(--ink)}
+.agg-meta{font:500 7.5px/1.3 "JetBrains Mono",monospace;color:var(--dim);margin-top:3px;display:flex;gap:6px;flex-wrap:wrap}
+.agg-hail{color:var(--amber)}
+.agg-wind{color:var(--cyan)}
+.agg-src{color:var(--mute)}
+
+.leaflet-container{font-family:inherit;background:#1a2330}
+.leaflet-bar a{background:#08111b!important;color:var(--ink)!important;border-color:var(--line)!important}
+.leaflet-bar a:hover{background:#0d1a26!important}
+.leaflet-control-scale-line{background:rgba(5,10,16,.6)!important;border-color:rgba(120,200,255,.3)!important;color:#7c93a8!important;font:500 8px "JetBrains Mono",monospace!important}
+.evt-tip{background:#08111b!important;border:1px solid var(--line2)!important;color:var(--ink)!important;font:600 9px/1.5 "JetBrains Mono",monospace!important;box-shadow:0 8px 24px rgba(0,0,0,.6)!important;border-radius:2px!important;padding:7px 9px!important}
+.evt-tip::before{display:none!important}
+.evt-label{background:rgba(5,10,16,.82)!important;border:1px solid var(--line)!important;color:var(--ink)!important;font:700 8px/1 "JetBrains Mono",monospace!important;letter-spacing:.06em!important;padding:4px 6px!important;border-radius:2px!important;box-shadow:none!important}
+.evt-label::before{display:none!important}
+.pulse{animation:pulseStroke 2.2s ease-in-out infinite}
+@keyframes pulseStroke{0%,100%{stroke-opacity:.06}50%{stroke-opacity:.38}}
+
+.wa{background:none!important;border:0!important}
+.wa-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--c);filter:drop-shadow(0 0 6px currentColor);pointer-events:none}
+.wa-wrap svg{display:block;transform-origin:50% 50%}
+.wa-wrap span{font:700 8.5px/1 "JetBrains Mono",monospace;letter-spacing:.03em;color:var(--c);background:rgba(5,10,16,.78);padding:2px 4px;border-radius:2px;white-space:nowrap}
+
+.rpt{background:none!important;border:0!important}
+.rpt i{position:relative;display:block;width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px rgba(5,10,16,.85),0 0 11px var(--c)}
+.rpt i::after{content:"";position:absolute;inset:-5px;border:1px solid var(--c);border-radius:50%;animation:ping 2.4s infinite}
+@keyframes ping{0%{transform:scale(.45);opacity:.9}80%,100%{transform:scale(1.65);opacity:0}}
+
+@media(max-width:1000px){
+  #searchCluster{max-width:none;width:100%;order:3}
+}
+@media(max-width:880px){
+  #panel{left:8px;right:8px;top:auto;bottom:8px;width:auto;height:58%;border-radius:4px}
+  #panel.closed{transform:translateY(115%)}
+  #panelReopen{left:50%;right:auto;bottom:8px;top:auto;transform:translateX(-50%)}
+  #detail{left:8px;right:8px;top:74px;width:auto;max-height:38vh;overflow:auto}
+  #maptools{right:8px;top:74px;transform:none;flex-direction:row}
+  .tool::after{display:none}
+  #basemapPicker{right:8px;top:130px;bottom:auto;flex-direction:row;flex-wrap:wrap;max-width:calc(100vw - 16px)}
+  #timeline{display:none!important}
+  #legend,#heatLegend{display:none}
+  #clock{display:none}
+  .brandtext span{display:none}
+  #searchCluster{flex-direction:column}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="boot">
+  <div>
+    <div class="boot-ring"></div>
+    <div class="boot-txt">INITIALIZING THREAT GRID<span>Multi-source · dedup · damage-density history</span></div>
+  </div>
+</div>
+
+<header id="topbar">
+  <div class="brandbar">
+    <div class="logo">H</div>
+    <div class="brandtext">
+      <b>HAIL<em>PATH</em></b>
+      <span>NATIONAL // THREAT CONSOLE</span>
+    </div>
+  </div>
+
+  <div id="searchCluster">
+    <div class="search-box" id="countyBox">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input id="countySearch" type="text" placeholder="Search US county…" autocomplete="off" spellcheck="false" aria-autocomplete="list">
+      <button id="countySearchBtn" class="search-btn" type="button">LOCATE</button>
+      <div class="ac-list" id="countyAC" role="listbox"></div>
+    </div>
+    <div class="search-box addr" id="addrBox">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <input id="addrSearch" type="text" placeholder="Search address or place…" autocomplete="off" spellcheck="false" aria-autocomplete="list">
+      <button id="addrSearchBtn" class="search-btn addr" type="button">FIND</button>
+      <div class="ac-list" id="addrAC" role="listbox"></div>
+    </div>
+  </div>
+
+  <div class="status-cluster">
+    <div id="livePill"><i></i>LIVE</div>
+    <div id="clock">--:--:--</div>
+  </div>
+</header>
+
+<aside id="panel" aria-label="Storm threat controls">
+  <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+  <div class="scan"></div>
+
+  <div class="p-head">
+    <div>
+      <div class="t">Threat assessment</div>
+      <div class="n" id="countyName">Maricopa <span>County</span></div>
+    </div>
+    <div class="p-head-right">
+      <div style="text-align:right">
+        <div class="t" style="font-size:8px">Feed</div>
+        <div class="n" id="feedMode" style="font-size:12px;color:var(--cyan)">HISTORY</div>
+      </div>
+      <button class="p-close" id="panelClose" type="button" aria-label="Close panel" title="Close panel">×</button>
+    </div>
+  </div>
+
+  <div class="p-body">
+    <div class="mode" role="group" aria-label="View mode">
+      <button id="modeHistory" class="on" type="button">HISTORY</button>
+      <button id="modeLive" class="live" type="button">LIVE</button>
+    </div>
+
+    <section class="sec">
+      <h2>Time window</h2>
+      <div class="g4" id="windowsShort"></div>
+    </section>
+
+    <section class="sec">
+      <h2>Damage history</h2>
+      <div class="slider-row">
+        <input type="range" id="daySlider" min="1" max="365" value="30" step="1" class="day-slider">
+        <div class="slider-labels">
+          <span>1D</span>
+          <span id="dayValue" class="slider-value">30 DAYS</span>
+          <span>365D</span>
+        </div>
+      </div>
+      <button id="goBtn" class="go-btn" type="button">
+        <span id="goBtnText">GO — SHOW DAMAGE HISTORY</span>
+      </button>
+    </section>
+
+    <section class="sec">
+      <h2>Threat types</h2>
+      <div class="g3" id="kinds"></div>
+    </section>
+
+    <section class="sec">
+      <h2>Risk floor</h2>
+      <div class="g4" id="levels"></div>
+    </section>
+
+    <div class="stats">
+      <div class="stat"><b id="sN" class="cyan">0</b><small>Unique storms</small></div>
+      <div class="stat"><b id="sTop" class="amber">–</b><small>Highest risk</small></div>
+      <div class="stat"><b id="sConf" class="green">0</b><small>Ground confirmed</small></div>
+    </div>
+
+    <div id="status">Connecting to threat feeds…</div>
+    <ul id="list"></ul>
+
+    <details class="dx" open>
+      <summary>Data check</summary>
+      <div id="dxb"></div>
+    </details>
+
+    <div class="foot">
+      Aggregated sources: NWS alerts · IEM warnings · IEM ground reports · Aviation Weather METAR · RainViewer radar.
+      Duplicates within 20 km / 45 min merged into one unique storm.
+      <br><button class="linkbtn" id="demoBtn" type="button">LOAD SAMPLE STORM</button>
+      <button class="detect-btn" id="detectBtn" type="button">FIND AFFECTED HOUSES →</button>
+    </div>
+  </div>
+</aside>
+
+<button id="panelReopen" type="button" aria-label="Open threat panel" title="Open threat panel">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  <span class="rc-badge" id="rvBadge">0</span>
+</button>
+
+<div id="maptools">
+  <button class="tool on" id="toolWarn" data-tip="WARNINGS" aria-pressed="true" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l9 17H3z"/><path d="M12 9v5"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>
+  </button>
+  <button class="tool on" id="toolWind" data-tip="WIND VECTORS" aria-pressed="true" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h11a3 3 0 100-6"/><path d="M3 12h16a3 3 0 110 6"/><path d="M3 16h7"/></svg>
+  </button>
+  <button class="tool on" id="toolReports" data-tip="GROUND REPORTS" aria-pressed="true" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>
+  </button>
+  <button class="tool" id="toolRecenter" data-tip="RECENTER" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="5"/></svg>
+  </button>
+</div>
+
+<div id="basemapPicker">
+  <button class="bmbtn on" data-bm="googleRoad" type="button">GOOGLE ROAD</button>
+  <button class="bmbtn" data-bm="googleSat" type="button">GOOGLE SAT</button>
+  <button class="bmbtn" data-bm="googleHybrid" type="button">GOOGLE HYBRID</button>
+  <button class="bmbtn" data-bm="googleTerrain" type="button">GOOGLE TERRAIN</button>
+  <button class="bmbtn" data-bm="esriStreet" type="button">ESRI STREET</button>
+  <button class="bmbtn" data-bm="osm" type="button">OSM</button>
+</div>
+
+<div id="legend">
+  <div class="leg-row"><i class="leg-dot" style="background:#ffc857"></i>HAIL</div>
+  <div class="leg-row"><i class="leg-dot" style="background:#5ee7ff"></i>WIND</div>
+  <div class="leg-row"><i class="leg-dot" style="background:#ff4d6d"></i>TORNADO</div>
+  <div class="leg-row"><i class="leg-dot" style="background:#b18cff"></i>DUST</div>
+</div>
+
+<div id="heatLegend">
+  <div class="heat-title">DAMAGE DENSITY</div>
+  <div class="heat-bar"></div>
+  <div class="heat-labels"><span>1 HIT</span><span>HOTSPOT</span></div>
+</div>
+
+<div id="timeline">
+  <span id="tlLabel">RADAR · NOW</span>
+  <input id="tlRange" type="range" min="0" max="0" value="0" step="1" aria-label="Radar time">
+</div>
+
+<div id="detail" role="dialog" aria-label="Threat detail"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+function whenReady(fn){
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, {once:true});
+  else fn();
+}
+
+whenReady(function init(){
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  if (!window.L){
+    const b = $('boot');
+    if (b) b.innerHTML = '<div class="boot-txt">MAP ENGINE UNAVAILABLE<span>Leaflet could not load.</span></div>';
+    return;
+  }
+  if (!$('map')) return;
+
+  const IEM = 'https://mesonet.agron.iastate.edu/geojson';
+  const NWS = 'https://api.weather.gov/alerts/active?area=AZ';
+  const AWC = 'https://aviationweather.gov/api/data/metar';
+  const RAINVIEWER = 'https://api.rainviewer.com/public/weather-maps.json';
+  const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+  const TIGER = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1/query';
+  const STORAGE_KEY = 'hailpath_state_v1';
+
+  const WINDOWS = [
+    {k:'7d',  l:'7 DAY',  h:168},
+    {k:'4d',  l:'4 DAY',  h:96},
+    {k:'2d',  l:'2 DAY',  h:48},
+    {k:'1d',  l:'1 DAY',  h:24},
+    {k:'12h', l:'12 HR',  h:12},
+    {k:'5h',  l:'5 HR',   h:5},
+    {k:'1h',  l:'1 HR',   h:1},
+    {k:'live',l:'LIVE',   h:2, live:true}
+  ];
+
+  const K = {
+    hail:    {l:'HAIL',       c:'#ffc857'},
+    wind:    {l:'WIND',       c:'#5ee7ff'},
+    tornado: {l:'TORNADO',    c:'#ff4d6d'},
+    dust:    {l:'DUST',       c:'#b18cff'},
+    flood:   {l:'FLOOD',      c:'#4c8dff'},
+    storm:   {l:'STORM',      c:'#8d9bad'}
+  };
+  const DAMAGE_COLOR = '#ff4d6d';
+
+  const LEVELS = [{v:0,l:'ALL'},{v:1,l:'DAMAGING'},{v:2,l:'HIGH'},{v:3,l:'SEVERE'}];
+  const TIER = ['BELOW THRESHOLD','DAMAGING','HIGH RISK','SEVERE'];
+
+  const STATIONS = [
+    ['KPHX','PHX'],['KSDL','SCOTTSDALE'],['KCHD','CHANDLER'],['KIWA','MESA'],
+    ['KGEU','GLENDALE'],['KGYR','GOODYEAR'],['KDVT','DEER VALLEY'],['KFFZ','FALCON']
+  ];
+
+  const RADAR_MAX_ZOOM = 5;
+
+  const state = {
+    win:'1d', min:0, customDays:30, lastWin:'1d',
+    on:new Set(['hail','wind','tornado','dust','flood']),
+    events:[], reports:[], winds:[],
+    selected:null, demo:false, loading:false,
+    layers:{warn:true, wind:true, reports:true},
+    radarHost:'', radarFrames:[], radarIdx:0, radarLayer:null, radarNowIdx:0,
+    basemap:'googleRoad',
+    timers:{alerts:null, radar:null, wind:null}
+  };
+
+  let currentCounty = {
+    name: 'Maricopa County',
+    bounds: L.latLngBounds([32.50,-113.34],[34.05,-111.04]),
+    geometry: null
+  };
+
+  const D = {};
+
+  function saveState(){
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        win: state.win, min: state.min, customDays: state.customDays,
+        lastWin: state.lastWin, on: Array.from(state.on),
+        basemap: state.basemap, layers: state.layers, county: currentCounty.name
+      }));
+    } catch(e){}
+  }
+
+  function loadState(){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (s.win) state.win = s.win;
+      if (typeof s.min === 'number') state.min = s.min;
+      if (typeof s.customDays === 'number') state.customDays = Math.max(1, Math.min(365, s.customDays));
+      if (s.lastWin) state.lastWin = s.lastWin;
+      if (Array.isArray(s.on)) state.on = new Set(s.on);
+      if (s.basemap && BASEMAPS[s.basemap]) state.basemap = s.basemap;
+      if (s.layers) state.layers = Object.assign({}, state.layers, s.layers);
+      if (s.county) currentCounty.name = s.county;
+    } catch(e){}
+  }
+
+  const iso = d => d.toISOString().slice(0,19) + 'Z';
+  const fmt = s => s ? new Date(s).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
+  const hailLvl = h => h >= 1.75 ? 3 : h >= 1.25 ? 2 : h >= 1 ? 1 : 0;
+  const windLvl = g => g >= 80 ? 3 : g >= 70 ? 2 : g >= 58 ? 1 : 0;
+  const toMph = kt => Math.round(kt * 1.15078);
+
+  function getWindowHours(){
+    if (state.win === 'custom') return state.customDays * 24;
+    const w = WINDOWS.find(x => x.k === state.win);
+    return w ? w.h : 24;
+  }
+
+  function setSource(key, ok, msg){
+    D[key] = {ok, msg};
+    const box = $('dxb');
+    if (box){
+      box.innerHTML = Object.keys(D).map(k => {
+        const v = D[k];
+        return '<div><i style="background:' + (v.ok ? '#3ddc84' : '#ff4d6d') + '"></i><b>' + esc(k) + ':</b> ' + esc(v.msg) + '</div>';
+      }).join('');
+    }
+  }
+
+  function getJSON(url, ms){
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), ms || 9000);
+    return fetch(url, {signal: ctl.signal, cache:'no-store'})
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .finally(() => clearTimeout(timer));
+  }
+
+  function val(p, key){
+    const P = p.parameters || {};
+    const k = Object.keys(P).find(x => x.toLowerCase() === key.toLowerCase());
+    if (!k || !P[k] || P[k][0] == null) return null;
+    return String(P[k][0]);
+  }
+
+  function compassDeg(name){
+    const n = String(name || '').toLowerCase().replace(/[^a-z]/g,'');
+    const map = {
+      north:0, northnortheast:22.5, northeast:45, eastnortheast:67.5,
+      east:90, eastsoutheast:112.5, southeast:135, southsoutheast:157.5,
+      south:180, southsouthwest:202.5, southwest:225, westsouthwest:247.5,
+      west:270, westnorthwest:292.5, northwest:315, northnorthwest:337.5
+    };
+    return Object.prototype.hasOwnProperty.call(map, n) ? map[n] : null;
+  }
+  function compassName(deg){
+    const names = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+    return names[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
+  }
+
+  function haversine(lat1, lon1, lat2, lon2){
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  function ring(x, y, r){
+    let inside = false;
+    for (let i = 0, j = r.length - 1; i < r.length; j = i++){
+      const a = r[i], b = r[j];
+      if ((a[1] > y) !== (b[1] > y) && x < (b[0]-a[0]) * (y-a[1]) / (b[1]-a[1]) + a[0]) inside = !inside;
+    }
+    return inside;
+  }
+  function inside(x, y, g){
+    if (!g) return false;
+    if (g.type === 'Point') return haversine(y, x, g.coordinates[1], g.coordinates[0]) < 0.1;
+    return (g.type === 'Polygon' ? [g.coordinates] : g.coordinates).some(p => ring(x, y, p[0]));
+  }
+  function centroid(g){
+    if (g.type === 'Point') return [g.coordinates[1], g.coordinates[0]];
+    let r;
+    if (g.type === 'Polygon') r = g.coordinates[0];
+    else if (g.type === 'MultiPolygon') r = g.coordinates[0][0];
+    else return [0,0];
+    let x = 0, y = 0;
+    r.forEach(p => { x += p[0]; y += p[1]; });
+    return [y / r.length, x / r.length];
+  }
+  function geomBounds(g){
+    if (g.type === 'Point') return {n: g.coordinates[1], s: g.coordinates[1], e: g.coordinates[0], w: g.coordinates[0]};
+    const pts = [];
+    (g.type === 'Polygon' ? [g.coordinates] : g.coordinates).forEach(poly => poly[0].forEach(c => pts.push(c)));
+    return {
+      n: Math.max.apply(null, pts.map(p => p[1])),
+      s: Math.min.apply(null, pts.map(p => p[1])),
+      e: Math.max.apply(null, pts.map(p => p[0])),
+      w: Math.min.apply(null, pts.map(p => p[0]))
+    };
+  }
+  function pointInCounty(lat, lng){
+    return lat >= currentCounty.bounds.getSouth() && lat <= currentCounty.bounds.getNorth()
+        && lng >= currentCounty.bounds.getWest() && lng <= currentCounty.bounds.getEast();
+  }
+
+  function highlightMatch(text, query){
+    if (!text) return '';
+    if (!query) return esc(text);
+    const idx = text.toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return esc(text);
+    return esc(text.slice(0, idx)) +
+      '<mark>' + esc(text.slice(idx, idx + query.length)) + '</mark>' +
+      esc(text.slice(idx + query.length));
+  }
+
+  /* ================================================================ */
+  /* MAP                                                              */
+  /* ================================================================ */
+  const map = L.map('map', {zoomControl:false, attributionControl:false, preferCanvas:true, maxZoom:21}).setView([33.3,-112.1], 8);
+  L.control.zoom({position:'bottomright'}).addTo(map);
+  L.control.scale({position:'bottomleft', imperial:true, metric:false}).addTo(map);
+
+  map.createPane('countyLines'); map.getPane('countyLines').style.zIndex = 340; map.getPane('countyLines').style.pointerEvents = 'none';
+  map.createPane('radar');  map.getPane('radar').style.zIndex = 250;  map.getPane('radar').style.pointerEvents = 'none';
+  map.createPane('county'); map.getPane('county').style.zIndex = 350;
+  map.createPane('warn');   map.getPane('warn').style.zIndex = 400;
+  map.createPane('marks');  map.getPane('marks').style.zIndex = 450;
+
+  const GOOGLE_SUBS = ['mt0','mt1','mt2','mt3'];
+  const BASEMAPS = {
+    googleRoad:    {name:'Google Road',    url:'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',   subs:GOOGLE_SUBS, maxZoom:21, maxNativeZoom:19},
+    googleSat:     {name:'Google Satellite',url:'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',  subs:GOOGLE_SUBS, maxZoom:21, maxNativeZoom:19},
+    googleHybrid:  {name:'Google Hybrid',  url:'https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', subs:GOOGLE_SUBS, maxZoom:21, maxNativeZoom:19},
+    googleTerrain: {name:'Google Terrain', url:'https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',   subs:GOOGLE_SUBS, maxZoom:21, maxNativeZoom:19},
+    esriStreet:    {name:'ESRI Street',    url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', maxZoom:21, maxNativeZoom:19},
+    osm:           {name:'OpenStreetMap',  url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',       maxZoom:21, maxNativeZoom:19}
+  };
+
+  let baseLayer = null;
+  let baseFailoverTimeout = null;
+
+  function applyBasemap(key){
+    const P = BASEMAPS[key];
+    if (!P) return;
+    if (baseLayer){ try { map.removeLayer(baseLayer); } catch(e){} baseLayer = null; }
+    clearTimeout(baseFailoverTimeout);
+    const opts = {maxZoom: P.maxZoom, maxNativeZoom: P.maxNativeZoom};
+    if (P.subs) opts.subdomains = P.subs;
+    const lyr = L.tileLayer(P.url, opts).addTo(map);
+    baseLayer = lyr;
+    let ok = 0, done = false;
+    const finish = success => { if (done) return; done = true; clearTimeout(baseFailoverTimeout); if (success) setSource('map', true, P.name); };
+    lyr.on('tileload', () => { if (baseLayer === lyr && ++ok === 1) finish(true); });
+    baseFailoverTimeout = setTimeout(() => finish(true), 15000);
+  }
+
+  /* ================================================================ */
+  /* RADAR — LIVE only, hard cap at z5                                */
+  /* ================================================================ */
+  function isLive(){ return state.win === 'live'; }
+
+  function radarShouldRender(){
+    return isLive() && state.layers.radar !== false && map.getZoom() <= RADAR_MAX_ZOOM;
+  }
+
+  function syncRadarPane(){
+    const pane = map.getPane('radar');
+    if (!pane) return;
+    pane.style.display = radarShouldRender() ? '' : 'none';
+  }
+
+  function syncRadarLayer(){
+    if (!state.radarLayer) return;
+    const want = radarShouldRender();
+    const has = map.hasLayer(state.radarLayer);
+    if (want && !has) state.radarLayer.addTo(map);
+    else if (!want && has) map.removeLayer(state.radarLayer);
+
+    const pill = $('livePill');
+    if (pill){
+      pill.classList.toggle('on', isLive());
+    }
+  }
+
+  function syncRadar(){
+    syncRadarPane();
+    syncRadarLayer();
+  }
+
+  map.on('zoomstart', syncRadar);
+  map.on('zoom', syncRadar);
+  map.on('zoomend', syncRadar);
+  map.on('moveend', syncRadar);
+
+  async function loadRadar(){
+    if (!isLive()) return;
+    try {
+      const j = await getJSON(RAINVIEWER, 10000);
+      if (!j || !j.radar || !Array.isArray(j.radar.past) || !j.radar.past.length) throw new Error('No frames');
+
+      state.radarHost = j.host || 'https://tilecache.rainviewer.com';
+      const past = Array.isArray(j.radar.past) ? j.radar.past : [];
+      const nowcast = Array.isArray(j.radar.nowcast) ? j.radar.nowcast : [];
+      state.radarFrames = past.concat(nowcast);
+      state.radarNowIdx = past.length ? past.length - 1 : 0;
+      state.radarIdx = state.radarNowIdx;
+
+      drawRadarFrame();
+      $('timeline').classList.add('on');
+      $('tlRange').min = '0';
+      $('tlRange').max = String(state.radarFrames.length - 1);
+      $('tlRange').value = String(state.radarIdx);
+      setSource('radar', true, 'RainViewer live');
+      syncRadar();
+    } catch (e) {
+      setSource('radar', false, 'Radar unavailable');
+    }
+  }
+
+  function drawRadarFrame(){
+    const f = state.radarFrames[state.radarIdx];
+    if (!f) return;
+    const url = state.radarHost + f.path + '/256/{z}/{x}/{y}/6/1_1.png';
+
+    if (!state.radarLayer){
+      state.radarLayer = L.tileLayer(url, {
+        pane:'radar',
+        opacity: 0.75,
+        maxZoom: RADAR_MAX_ZOOM,
+        maxNativeZoom: RADAR_MAX_ZOOM,
+        tileSize: 256
+      });
+    } else {
+      state.radarLayer.setUrl(url);
+    }
+
+    const nowFrame = state.radarFrames[state.radarNowIdx];
+    if (nowFrame){
+      const deltaMin = Math.round((f.time - nowFrame.time) / 60);
+      if (deltaMin === 0) $('tlLabel').textContent = 'RADAR · NOW';
+      else if (deltaMin < 0) $('tlLabel').textContent = 'RADAR · -' + Math.abs(deltaMin) + ' MIN';
+      else $('tlLabel').textContent = 'RADAR · +' + deltaMin + ' MIN';
+    }
+    $('tlRange').value = String(state.radarIdx);
+  }
+
+  $('tlRange').addEventListener('input', e => {
+    state.radarIdx = Number(e.target.value);
+    drawRadarFrame();
+  });
+
+  /* ================================================================ */
+  /* COUNTY OUTLINES                                                  */
+  /* ================================================================ */
+  let countiesLayer = null;
+  async function loadCountyOutlines(){
+    try {
+      const j = await getJSON('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json', 25000);
+      if (!j || !j.features) throw new Error('no features');
+      countiesLayer = L.geoJSON(j, {
+        pane: 'countyLines',
+        style: {color:'#5ee7ff', weight: 0.5, opacity: 0.32, fill: false, interactive: false}
+      }).addTo(map);
+    } catch(e){}
+  }
+
+  let countyLayer = null;
+  let countyHaloLayer = null;
+
+  async function setCountyFromGeometry(geom, name){
+    if (countyLayer){ try { map.removeLayer(countyLayer); } catch(e){} }
+    if (countyHaloLayer){ try { map.removeLayer(countyHaloLayer); } catch(e){} }
+    currentCounty.geometry = geom;
+    currentCounty.bounds = L.geoJSON(geom).getBounds();
+    currentCounty.name = name;
+    const short = name.replace(/\s+County$/i,'');
+    $('countyName').innerHTML = esc(short) + ' <span>County</span>';
+
+    countyHaloLayer = L.geoJSON(geom, {pane:'county', style:{color:'#5ee7ff', weight:9, opacity:.06, fill:false}, interactive:false}).addTo(map);
+    countyLayer = L.geoJSON(geom, {
+      pane:'county',
+      style:{color:'#5ee7ff', weight:1.6, opacity:.85, fillColor:'#5ee7ff', fillOpacity:.02, dashArray:'3 6'},
+      interactive:false
+    }).addTo(map);
+
+    const wide = window.innerWidth > 880;
+    map.fitBounds(currentCounty.bounds, {
+      paddingTopLeft: wide ? [430, 90] : [30, 70],
+      paddingBottomRight: wide ? [80, 80] : [30, 70]
+    });
+
+    saveState();
+    setSource('county', true, name);
+    await load(true);
+    await loadWinds();
+  }
+
+  async function fetchCountyFromTIGER(name){
+    const where = "UPPER(NAME) LIKE '%" + name.toUpperCase().replace(/'/g,"''") + "%'";
+    const url = TIGER + '?where=' + encodeURIComponent(where) +
+                '&outFields=NAME,STATE,COUNTY&returnGeometry=true&outSR=4326&f=geojson';
+    const j = await getJSON(url, 12000);
+    const feats = (j.features || []).filter(f => f.geometry);
+    if (!feats.length) throw new Error('no results');
+    return feats;
+  }
+
+  async function loadInitialCounty(){
+    let target = 'Maricopa';
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved){
+        const s = JSON.parse(saved);
+        if (s.county) target = s.county.replace(/\s+County$/i, '');
+      }
+    } catch(e){}
+    try {
+      const feats = await fetchCountyFromTIGER(target);
+      const az = feats.find(f => f.properties.STATE === '04') || feats[0];
+      await setCountyFromGeometry(az.geometry, (az.properties.NAME || target) + ' County');
+    } catch(e) {
+      try {
+        const feats = await fetchCountyFromTIGER('Maricopa');
+        const az = feats.find(f => f.properties.STATE === '04') || feats[0];
+        await setCountyFromGeometry(az.geometry, 'Maricopa County');
+      } catch(e2) {}
+    }
+  }
+
+  const warnGroup = L.layerGroup().addTo(map);
+  const markGroup = L.layerGroup().addTo(map);
+
+  let addrMarker = null;
+  function dropAddressMarker(lat, lng, label){
+    if (addrMarker){ try { map.removeLayer(addrMarker); } catch(e){} }
+    const icon = L.divIcon({
+      className: 'addr-pin',
+      html: '<div style="position:relative;width:22px;height:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))">' +
+            '<svg viewBox="0 0 24 36" style="position:absolute;inset:0;width:100%;height:100%">' +
+              '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z" fill="#ff4d6d" stroke="#fff" stroke-width="1.5"/>' +
+              '<circle cx="12" cy="12" r="4" fill="#fff"/>' +
+            '</svg></div>',
+      iconSize:[22, 30],
+      iconAnchor:[11, 30]
+    });
+    addrMarker = L.marker([lat, lng], {icon, zIndexOffset: 1000}).addTo(map);
+    if (label) addrMarker.bindTooltip(label, {direction:'top', className:'evt-tip', offset:[0,-26], opacity:1});
+    return addrMarker;
+  }
+
+  function parseMotion(p){
+    const emd = val(p, 'eventMotionDescription');
+    if (emd){
+      const m = /(\d+)\s*KT-(\d+)\s*DEG/i.exec(emd);
+      if (m) return {mph: toMph(Number(m[1])), deg: Number(m[2])};
+    }
+    const text = ((p.description || '') + ' ' + (p.instruction || ''));
+    const m = /moving\s+([a-z]+)(?:\s+at\s+(\d+)\s*mph)?/i.exec(text);
+    if (m){
+      const deg = compassDeg(m[1]);
+      if (deg != null) return {mph: m[2] ? Number(m[2]) : 0, deg};
+    }
+    return null;
+  }
+
+  function classify(phen, hail, gust){
+    const kinds = [];
+    let lvl = 0, main = 'storm';
+    const add = (kind, l) => { kinds.push(kind); if (l > lvl || (l === lvl && main === 'storm')){ lvl = l; main = kind; } };
+    if (phen === 'TO') add('tornado', 3);
+    if (phen === 'EW') add('wind', 3);
+    if (phen === 'TR') add('wind', 2);
+    if (phen === 'DS') add('dust', 1);
+    if (phen === 'FF') add('flood', 0);
+    if (phen === 'HW') add('wind', Math.max(1, windLvl(gust)));
+    if (phen === 'WI') add('wind', windLvl(gust));
+    if (phen === 'DA') add('dust', 0);
+    if (phen === 'SV'){
+      if (hailLvl(hail)) add('hail', hailLvl(hail));
+      if (windLvl(gust)) add('wind', windLvl(gust));
+    }
+    return {kinds: kinds.length ? kinds : ['storm'], lvl, main};
+  }
+
+  function heading(e){
+    const parts = [];
+    if (e.main === 'tornado') parts.push('TORNADO');
+    else if (e.main === 'dust') parts.push('DUST STORM');
+    else if (e.main === 'flood') parts.push('FLASH FLOOD');
+    if (e.hail > 0) parts.push('Hail ' + e.hail.toFixed(2) + ' in');
+    if (e.gust > 0) parts.push('Wind ' + e.gust + ' mph');
+    if (parts.length === 0) return K[e.main].l;
+    return parts.join(' · ');
+  }
+
+  function normalizeEvent(src, raw){
+    return {
+      source: src,
+      lat: raw.lat, lng: raw.lng,
+      time: raw.time instanceof Date ? raw.time : new Date(raw.time),
+      type: raw.type,
+      severity: raw.severity,
+      hail: raw.hail || 0,
+      gust: raw.gust || 0,
+      motion: raw.motion || null,
+      geom: raw.geom || { type:'Point', coordinates:[raw.lng, raw.lat] },
+      area: raw.area || '',
+      tornado: raw.tornado || '',
+      threat: raw.threat || '',
+      txt: raw.txt || '',
+      city: raw.city || '',
+      srcKind: raw.srcKind || 'hist'
+    };
+  }
+
+  function deduplicate(rawEvents, maxDistanceKm, maxTimeMins){
+    maxDistanceKm = maxDistanceKm || 20;
+    maxTimeMins   = maxTimeMins   || 45;
+    const merged = [];
+    const latThreshold = maxDistanceKm / 111;
+
+    rawEvents.forEach(e => {
+      if (!e.time || isNaN(e.time.getTime())) return;
+      let matched = null;
+      for (const cand of merged){
+        if (Math.abs(cand.lat - e.lat) > latThreshold) continue;
+        if (Math.abs(e.time - cand.time) / 60000 > maxTimeMins) continue;
+        if (haversine(e.lat, e.lng, cand.lat, cand.lng) > maxDistanceKm) continue;
+        matched = cand;
+        break;
+      }
+      if (matched){
+        if (e.severity > matched.severity){ matched.severity = e.severity; matched.type = e.type; matched.main = e.type; }
+        matched.hail = Math.max(matched.hail || 0, e.hail || 0);
+        matched.gust = Math.max(matched.gust || 0, e.gust || 0);
+        if (e.time > matched.time) matched.time = e.time;
+        if (e.geom && e.geom.type !== 'Point' && (!matched.geom || matched.geom.type === 'Point')) matched.geom = e.geom;
+        if (e.motion && !matched.motion) matched.motion = e.motion;
+        if (e.tornado) matched.tornado = e.tornado;
+        if (e.threat) matched.threat = e.threat;
+        if (e.city && !matched.city) matched.city = e.city;
+        if (e.srcKind === 'live') matched.srcKind = 'live';
+        if (matched.sources.indexOf(e.source) === -1) matched.sources.push(e.source);
+        if (matched.kinds.indexOf(e.type) === -1) matched.kinds.push(e.type);
+      } else {
+        const m = Object.assign({}, e);
+        m.sources = [e.source];
+        m.kinds = [e.type];
+        m.main = e.type;
+        m.lvl = e.severity;
+        m.key = 'evt-' + e.lat.toFixed(4) + '-' + e.lng.toFixed(4) + '-' + e.source + '-' + Math.round(e.time.getTime()/60000);
+        if (!m.geom) m.geom = { type:'Point', coordinates:[e.lng, e.lat] };
+        m.hits = [];
+        merged.push(m);
+      }
+    });
+
+    merged.forEach(e => {
+      const inPoly = e.geom && e.geom.type !== 'Point' ? e.geom : null;
+      e.hits = state.reports.filter(r => {
+        if (r.lvl < 1) return false;
+        if (inPoly) return inside(r.lng, r.lat, inPoly);
+        return haversine(e.lat, e.lng, r.lat, r.lng) <= 5;
+      });
+    });
+
+    return merged;
+  }
+
+  const NWSMAP = {
+    'Tornado Warning':'TO','Severe Thunderstorm Warning':'SV','Dust Storm Warning':'DS',
+    'Flash Flood Warning':'FF','Extreme Wind Warning':'EW','Tropical Storm Warning':'TR',
+    'Hurricane Warning':'TR','High Wind Warning':'HW','Wind Advisory':'WI','Blowing Dust Advisory':'DA'
+  };
+  function gustText(t){
+    const m = /gusts?(?:\s+up\s+to|\s+of)?\s+(\d+)(?:\s+to\s+(\d+))?\s*mph/i.exec((t || '').replace(/\s+/g,' '));
+    return m ? Math.max(Number(m[1]), Number(m[2] || 0)) : 0;
+  }
+  function repKind(p){
+    const t = (p.typetext || '').toUpperCase();
+    const m = Number(p.magnitude) || 0;
+    if (t === 'HAIL' && m > 0) return {kind:'hail', lvl:hailLvl(m), txt:m.toFixed(2) + ' in hail'};
+    if (t === 'TORNADO') return {kind:'tornado', lvl:3, txt:'Tornado'};
+    if (t.indexOf('WND DMG') !== -1) return {kind:'wind', lvl:2, txt:'Wind damage'};
+    if (t.indexOf('WND GST') !== -1 && m >= 58) return {kind:'wind', lvl:windLvl(m) || 1, txt:m + ' mph gust'};
+    if (t === 'DUST STORM') return {kind:'dust', lvl:1, txt:'Dust storm'};
+    if (t === 'FLASH FLOOD') return {kind:'flood', lvl:0, txt:'Flash flood'};
+    return null;
+  }
+
+  async function load(fit){
+    if (state.loading) return;
+    state.loading = true;
+
+    const hours = getWindowHours();
+    const end = new Date();
+    const start = new Date(end.getTime() - hours * 3600e3);
+    const q = 'sts=' + iso(start) + '&ets=' + iso(end);
+    const sbwUrl = IEM + '/sbw.geojson?states=AZ&' + q;
+    const lsrUrl = IEM + '/lsr.geojson?wfos=PSR&' + q;
+    const metarUrl = AWC + '?ids=' + STATIONS.map(s => s[0]).join(',') + '&format=json&hours=12';
+
+    const timeout = hours > 720 ? 30000 : (hours > 168 ? 20000 : 12000);
+    $('status').textContent = 'AGGREGATING MULTI-SOURCE FEED…';
+
+    const [n, a, b, m] = await Promise.allSettled([
+      getJSON(NWS, 9000),
+      getJSON(sbwUrl, timeout),
+      getJSON(lsrUrl, timeout),
+      getJSON(metarUrl, 10000)
+    ]);
+
+    const raw = [];
+
+    if (n.status === 'fulfilled'){
+      (n.value.features || []).forEach(f => {
+        const p = f.properties || {};
+        const phen = NWSMAP[p.event];
+        if (!phen || !f.geometry) return;
+        const hail = parseFloat(val(p, 'maxHailSize')) || 0;
+        const gust = parseInt(val(p, 'maxWindGust'), 10) || gustText(p.description);
+        const c = classify(phen, hail, gust);
+        const cent = centroid(f.geometry);
+        raw.push(normalizeEvent('NWS', {
+          lat: cent[0], lng: cent[1],
+          time: p.effective || p.sent,
+          type: c.main, severity: c.lvl,
+          hail, gust,
+          motion: parseMotion(p),
+          geom: f.geometry,
+          area: p.areaDesc,
+          tornado: val(p, 'tornadoDetection'),
+          threat: val(p, 'thunderstormDamageThreat') || val(p, 'flashFloodDamageThreat'),
+          srcKind: 'live'
+        }));
+      });
+    }
+
+    if (a.status === 'fulfilled'){
+      (a.value.features || []).forEach(f => {
+        const p = f.properties || {};
+        if (!f.geometry) return;
+        if (['SV','TO','DS','FF','EW'].indexOf(p.phenomena) === -1) return;
+        const hail = parseFloat(p.hailtag != null ? p.hailtag : p.max_hailtag) || 0;
+        const gust = parseInt(p.windtag != null ? p.windtag : p.max_windtag, 10) || 0;
+        const c = classify(p.phenomena, hail, gust);
+        const cent = centroid(f.geometry);
+        const motion = (p.drct != null && p.sknt != null) ? {deg:Number(p.drct), mph:toMph(Number(p.sknt))} : null;
+        raw.push(normalizeEvent('IEM', {
+          lat: cent[0], lng: cent[1],
+          time: p.issue || p.polygon_begin,
+          type: c.main, severity: c.lvl,
+          hail, gust, motion,
+          geom: f.geometry,
+          srcKind: 'hist'
+        }));
+      });
+    }
+
+    state.reports = [];
+    if (b.status === 'fulfilled'){
+      (b.value.features || []).forEach(f => {
+        const r = repKind(f.properties || {});
+        if (!r) return;
+        state.reports.push(Object.assign({}, r, {
+          lat: f.geometry.coordinates[1],
+          lng: f.geometry.coordinates[0],
+          p: f.properties
+        }));
+        raw.push(normalizeEvent('LSR', {
+          lat: f.geometry.coordinates[1],
+          lng: f.geometry.coordinates[0],
+          time: f.properties.valid || f.properties.utc_time,
+          type: r.kind, severity: r.lvl,
+          hail: r.kind === 'hail' ? Number(f.properties.magnitude) || 0 : 0,
+          gust: r.kind === 'wind' ? Number(f.properties.magnitude) || 0 : 0,
+          txt: r.txt,
+          city: f.properties.city,
+          srcKind: 'ground'
+        }));
+      });
+    }
+
+    if (m.status === 'fulfilled' && Array.isArray(m.value)){
+      m.value.forEach(metar => {
+        const windKt = metar.wspd || 0;
+        const gustKt = metar.wgst || 0;
+        const hasTS = /TS/.test(metar.wxString || '');
+        if (gustKt >= 35 || hasTS){
+          const mph = toMph(gustKt || windKt);
+          raw.push(normalizeEvent('AWC', {
+            lat: metar.lat, lng: metar.lon,
+            time: metar.reportTime,
+            type: hasTS ? 'storm' : 'wind',
+            severity: windLvl(mph),
+            hail: 0, gust: mph,
+            srcKind: 'station',
+            city: metar.station_id || ''
+          }));
+        }
+      });
+    }
+
+    setSource('nws', n.status === 'fulfilled', n.status === 'fulfilled' ? ((n.value.features || []).length + ' active') : 'unreachable');
+    setSource('iem', a.status === 'fulfilled' || b.status === 'fulfilled', a.status === 'fulfilled' ? ((a.value.features || []).length + ' warn / ' + state.reports.length + ' rpts') : 'unreachable');
+    setSource('awc', m.status === 'fulfilled', m.status === 'fulfilled' ? ((m.value || []).length + ' METARs') : 'unreachable');
+
+    const merged = deduplicate(raw, 20, 45);
+    state.events = merged.filter(e => pointInCounty(e.lat, e.lng));
+
+    state.loading = false;
+    const t = new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+    const missing = [];
+    if (n.status !== 'fulfilled') missing.push('NWS');
+    if (a.status !== 'fulfilled') missing.push('IEM warn');
+    if (b.status !== 'fulfilled') missing.push('IEM rpts');
+    if (m.status !== 'fulfilled') missing.push('AWC');
+
+    const windowLabel = state.win === 'custom' ? state.customDays + 'D' : (WINDOWS.find(x => x.k === state.win) || {}).l;
+    $('status').textContent =
+      'MERGED · ' + state.events.length + ' UNIQUE · ' + windowLabel + ' · ' + raw.length + ' RAW · ' + t
+      + (missing.length ? ' · OFFLINE: ' + missing.join(', ').toUpperCase() : '');
+
+    renderAll(fit);
+  }
+
+  function getShown(){
+    const base = state.demo ? [demoEvent()].concat(state.events) : state.events;
+    return base
+      .filter(e => e.lvl >= state.min && e.kinds.some(k => k === 'storm' || state.on.has(k)))
+      .sort((x, y) => y.lvl - x.lvl || new Date(y.time) - new Date(x.time));
+  }
+
+  function demoEvent(){
+    return {
+      key:'demo', src:'demo', phen:'SV', hail:1.75, gust:70,
+      time:new Date().toISOString(), kinds:['hail','wind'], lvl:3, main:'hail',
+      motion:{deg:45, mph:30}, tornado:'RADAR INDICATED', threat:'CONSIDERABLE',
+      hits:[], area:'Sample polygon', sources:['DEMO'],
+      lat:33.37, lng:-111.78,
+      geom:{type:'Polygon', coordinates:[[[-111.98,33.37],[-111.72,33.47],[-111.58,33.41],[-111.84,33.31],[-111.98,33.37]]]}
+    };
+  }
+
+  function longMode(){ return state.win === 'custom'; }
+
+  function renderAll(fit){
+    const shown = getShown();
+    renderStats(shown);
+    renderList(shown);
+    renderMap(shown);
+    if (fit) fitToShown(shown);
+  }
+
+  function renderStats(shown){
+    $('sN').textContent = shown.length;
+    $('sTop').textContent = shown.length ? TIER[shown[0].lvl].split(' ')[0] : '–';
+    $('sConf').textContent = shown.filter(e => e.hits && e.hits.length).length;
+    updateReopenBadge(shown.length);
+  }
+
+  function updateReopenBadge(n){
+    const btn = $('panelReopen'), badge = $('rvBadge');
+    if (!btn || !badge) return;
+    if (n > 0){ badge.textContent = n > 99 ? '99+' : n; btn.classList.add('has-badge'); }
+    else btn.classList.remove('has-badge');
+  }
+
+  function renderList(shown){
+    const list = $('list');
+    list.innerHTML = '';
+    if (!shown.length){
+      list.innerHTML = '<li class="empty">NO THREATS MATCH THESE FILTERS.<br>Try a longer window or switch to <b>LIVE</b>.</li>';
+      return;
+    }
+    const cap = longMode() ? 200 : shown.length;
+    shown.slice(0, cap).forEach(e => {
+      const c = longMode() ? DAMAGE_COLOR : K[e.main].c;
+      const li = document.createElement('li');
+      li.className = 'card' + (state.selected === e.key ? ' sel' : '');
+      li.dataset.key = e.key;
+      li.style.setProperty('--c', c);
+      li.tabIndex = 0;
+      const motion = e.motion
+        ? '<span><svg class="arr" viewBox="0 0 24 24" style="transform:rotate(' + e.motion.deg + 'deg)"><path d="M12 2l6.5 18L12 16.2 5.5 20z" fill="currentColor"/></svg>' + compassName(e.motion.deg) + (e.motion.mph ? ' ' + e.motion.mph : '') + '</span>'
+        : '';
+      const sourceTags = (e.sources || []).map(s => {
+        const cls = s === 'NWS' ? 'nws' : s === 'IEM' ? 'iem' : s === 'LSR' ? 'lsr' : s === 'AWC' ? 'awc' : '';
+        return '<span class="src-tag ' + cls + '">' + esc(s) + '</span>';
+      }).join('');
+      li.innerHTML =
+        '<div class="rail"></div>' +
+        '<div class="card-body">' +
+          '<div class="card-top"><b>' + esc(heading(e)) + '</b><span class="badge">' + esc(TIER[e.lvl]) + '</span></div>' +
+          '<div class="metrics">' +
+            (e.hail ? '<span><b>' + e.hail.toFixed(2) + '</b> IN</span>' : '') +
+            (e.gust ? '<span><b>' + e.gust + '</b> MPH</span>' : '') +
+            motion +
+          '</div>' +
+          '<div class="card-src">' + sourceTags + '</div>' +
+          '<div class="card-meta">' +
+            '<span>' + esc(fmt(e.time)) + '</span>' +
+            (e.hits && e.hits.length ? '<span class="conf">● ' + e.hits.length + ' CONFIRMED</span>' : '') +
+            (e.city ? '<span>' + esc(e.city) + '</span>' : '') +
+          '</div>' +
+        '</div>';
+      const go = () => selectEvent(e, true);
+      li.addEventListener('click', go);
+      li.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(); } });
+      list.appendChild(li);
+    });
+    if (cap < shown.length){
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.innerHTML = 'Showing ' + cap + ' of ' + shown.length + ' events.';
+      list.appendChild(li);
+    }
+  }
+
+  function windIcon(deg, mph, color, label){
+    const size = Math.max(26, Math.min(42, 24 + mph * 0.28));
+    const html =
+      '<div class="wa-wrap" style="--c:' + color + '">' +
+        '<svg viewBox="0 0 24 24" style="width:' + size + 'px;height:' + size + 'px;transform:rotate(' + deg + 'deg)">' +
+          '<path d="M12 2L18.5 20L12 16.2L5.5 20Z" fill="currentColor"/>' +
+        '</svg>' +
+        '<span>' + esc(label) + '</span>' +
+      '</div>';
+    return L.divIcon({html, className:'wa', iconSize:[84, size + 20], iconAnchor:[42, (size + 20) / 2]});
+  }
+
+  function renderMap(shown){
+    warnGroup.clearLayers();
+    markGroup.clearLayers();
+
+    const long = longMode();
+    $('legend').style.display = long ? 'none' : 'block';
+    $('heatLegend').classList.toggle('on', long && state.layers.warn);
+
+    if (state.layers.warn){
+      const renderOrder = long ? shown.slice().reverse() : shown;
+
+      if (long){
+        renderOrder.forEach(e => {
+          if (!e.geom) return;
+          if (e.geom.type !== 'Point'){
+            L.geoJSON(e.geom, {
+              pane:'warn',
+              style:{
+                color: DAMAGE_COLOR,
+                weight: 1.0 + e.lvl * 0.4,
+                opacity: 0.72,
+                fillColor: DAMAGE_COLOR,
+                fillOpacity: 0.04 + e.lvl * 0.025
+              },
+              interactive: false
+            }).addTo(warnGroup);
+          } else {
+            L.circleMarker([e.lat, e.lng], {
+              pane:'warn', radius: 3 + e.lvl, color:DAMAGE_COLOR, weight:1.2, fillColor:DAMAGE_COLOR, fillOpacity:0.15,
+              interactive: false
+            }).addTo(warnGroup);
+          }
+        });
+      } else {
+        shown.forEach(e => {
+          if (!e.geom) return;
+          const c = K[e.main].c;
+          if (e.geom.type !== 'Point'){
+            const layer = L.geoJSON(e.geom, {
+              pane:'warn',
+              style:{color:c, weight:1.4 + e.lvl * 0.6, opacity:0.95, fillColor:c, fillOpacity:0.09 + e.lvl * 0.055},
+              interactive:true
+            }).addTo(warnGroup);
+            layer.on('click', ev => { L.DomEvent.stopPropagation(ev); selectEvent(e, false); });
+            layer.bindTooltip('<b>' + esc(heading(e)) + '</b><br>' + esc(TIER[e.lvl]), {className:'evt-tip', direction:'top', sticky:true, opacity:1});
+            e._layer = layer;
+          } else {
+            const mk = L.circleMarker([e.lat, e.lng], {
+              pane:'warn', radius: 5 + e.lvl, color:c, weight:1.5, fillColor:c, fillOpacity:0.35
+            }).addTo(warnGroup);
+            mk.on('click', ev => { L.DomEvent.stopPropagation(ev); selectEvent(e, false); });
+            mk.bindTooltip('<b>' + esc(heading(e)) + '</b><br>' + esc(TIER[e.lvl]), {className:'evt-tip', direction:'top', opacity:1});
+            e._layer = mk;
+          }
+          if (e.lvl >= 2 || state.selected === e.key){
+            L.tooltip({permanent:true, direction:'center', className:'evt-label', interactive:false})
+              .setLatLng([e.lat, e.lng]).setContent(esc(heading(e))).addTo(markGroup);
+          }
+        });
+      }
+    }
+
+    if (state.layers.wind){
+      if (!long){
+        shown.forEach(e => {
+          if (!e.motion || !e.geom) return;
+          const label = compassName(e.motion.deg) + (e.motion.mph ? ' ' + e.motion.mph : '');
+          L.marker([e.lat, e.lng], {icon:windIcon(e.motion.deg, e.motion.mph || 10, K[e.main].c, label), pane:'marks', interactive:false}).addTo(markGroup);
+        });
+      }
+      state.winds.forEach(w => {
+        const color = w.mph >= 25 ? '#ffc857' : '#5ee7ff';
+        const label = Math.round(w.mph) + ' ' + compassName(w.dir);
+        L.marker([w.lat, w.lng], {
+          icon:windIcon((w.dir + 180) % 360, w.mph, color, label),
+          pane:'marks', interactive:false, opacity:0.9
+        }).addTo(markGroup);
+      });
+    }
+
+    if (state.layers.reports && !long){
+      state.reports
+        .filter(r => r.lvl >= state.min && state.on.has(r.kind))
+        .forEach(r => {
+          const icon = L.divIcon({className:'rpt', html:'<i style="--c:' + K[r.kind].c + '"></i>', iconSize:[14,14], iconAnchor:[7,7]});
+          L.marker([r.lat, r.lng], {icon, pane:'marks'})
+            .bindTooltip('<b>' + esc(r.txt) + '</b><br>' + esc(r.p.city || '') + '<br>' + esc(fmt(r.p.valid)), {className:'evt-tip', direction:'top', opacity:1})
+            .addTo(markGroup);
+        });
+    }
+
+    if (state.selected && !long){
+      const e = shown.find(x => x.key === state.selected);
+      if (e && e.geom && e.geom.type !== 'Point'){
+        L.geoJSON(e.geom, {
+          pane:'warn',
+          style:{color:K[e.main].c, weight:9, opacity:0.18, fill:false, className:'pulse'},
+          interactive:false
+        }).addTo(markGroup);
+      }
+    }
+  }
+
+  function fitToShown(shown){
+    const wide = window.innerWidth > 880;
+    if (!shown.length || longMode()){
+      map.fitBounds(currentCounty.bounds, {
+        paddingTopLeft: wide ? [430, 90] : [30, 70],
+        paddingBottomRight: wide ? [80, 80] : [30, 70]
+      });
+      return;
+    }
+    const bb = L.latLngBounds([]);
+    shown.forEach(e => { if (e.geom){ const b = geomBounds(e.geom); bb.extend([b.s, b.w]); bb.extend([b.n, b.e]); } });
+    if (!bb.isValid()) return;
+    map.fitBounds(bb, {
+      paddingTopLeft: wide ? [440, 90] : [30, 60],
+      paddingBottomRight: wide ? [80, 80] : [30, 60],
+      maxZoom: 11
+    });
+  }
+
+  function selectEvent(e, fly){
+    state.selected = e.key;
+    document.querySelectorAll('.card').forEach(li => li.classList.toggle('sel', li.dataset.key === e.key));
+    showDetail(e);
+    renderMap(getShown());
+    if (fly && e.geom){
+      const wide = window.innerWidth > 880;
+      if (e.geom.type !== 'Point'){
+        map.flyToBounds(L.geoJSON(e.geom).getBounds(), {
+          paddingTopLeft: wide ? [440, 90] : [30, 70],
+          paddingBottomRight: wide ? [80, 80] : [30, 70],
+          maxZoom: 12, duration: 0.7
+        });
+      } else {
+        map.flyTo([e.lat, e.lng], 12, {duration:0.7});
+      }
+    }
+  }
+
+  function clearSelection(){
+    state.selected = null;
+    $('detail').classList.remove('on');
+    $('detail').innerHTML = '';
+    document.querySelectorAll('.card').forEach(li => li.classList.remove('sel'));
+    renderMap(getShown());
+  }
+
+  map.on('click', function(ev){
+    if (longMode()){
+      const lat = ev.latlng.lat;
+      const lng = ev.latlng.lng;
+      const hits = getShown().filter(e => {
+        if (e.geom && e.geom.type !== 'Point') return inside(lng, lat, e.geom);
+        return haversine(lat, lng, e.lat, e.lng) < 2;
+      });
+      if (hits.length){ showAggregate(lat, lng, hits); return; }
+    }
+    clearSelection();
+  });
+
+  function showDetail(e){
+    const c = longMode() ? DAMAGE_COLOR : K[e.main].c;
+    const d = $('detail');
+    const motion = e.motion
+      ? '<svg class="arr" viewBox="0 0 24 24" style="transform:rotate(' + e.motion.deg + 'deg)"><path d="M12 2l6.5 18L12 16.2 5.5 20z" fill="currentColor"/></svg>' +
+        compassName(e.motion.deg) + '<span>' + (e.motion.mph || 0) + ' MPH</span>'
+      : '—';
+
+    let factors = '';
+    if (e.hail) factors += '<span class="factor">' + e.hail.toFixed(2) + ' IN HAIL</span>';
+    if (e.gust) factors += '<span class="factor">' + e.gust + ' MPH GUST</span>';
+    if (e.tornado) factors += '<span class="factor hot">TORNADO ' + esc(e.tornado) + '</span>';
+    if (e.threat) factors += '<span class="factor hot">' + esc(e.threat) + ' THREAT</span>';
+    if (e.hits && e.hits.length) factors += '<span class="factor ok">' + e.hits.length + ' GROUND CONFIRMED</span>';
+    if (!factors) factors = '<span class="factor">NO DAMAGE FACTORS LISTED</span>';
+
+    const srcTags = (e.sources || []).map(s => {
+      const cls = s === 'NWS' ? 'nws' : s === 'IEM' ? 'iem' : s === 'LSR' ? 'lsr' : s === 'AWC' ? 'awc' : '';
+      return '<span class="src-tag ' + cls + '">' + esc(s) + '</span>';
+    }).join('');
+
+    d.innerHTML =
+      '<div class="det-head">' +
+        '<div><div class="det-k">Threat profile</div><div class="det-title" style="color:' + c + '">' + esc(heading(e)) + '</div></div>' +
+        '<button class="det-close" id="detailClose" type="button" aria-label="Close">×</button>' +
+      '</div>' +
+      '<div class="riskbar" style="--c:' + c + '">' +
+        [0,1,2,3].map(i => '<i class="' + (i <= e.lvl ? 'on' : '') + '"></i>').join('') +
+      '</div>' +
+      '<div class="det-grid">' +
+        '<div class="det-cell"><small>Hail</small><b>' + (e.hail ? e.hail.toFixed(2) : '—') + '<span>IN</span></b></div>' +
+        '<div class="det-cell"><small>Wind gust</small><b>' + (e.gust ? e.gust : '—') + '<span>MPH</span></b></div>' +
+        '<div class="det-cell"><small>Motion</small><b style="font-size:12px">' + motion + '</b></div>' +
+        '<div class="det-cell"><small>Confirmed</small><b>' + ((e.hits && e.hits.length) || 0) + '<span>RPTS</span></b></div>' +
+      '</div>' +
+      '<div class="factors">' + factors + '</div>' +
+      '<div class="det-src">' + srcTags + '</div>' +
+      '<div class="det-meta">' + esc(TIER[e.lvl]) + '<br>' + esc(fmt(e.time)) + (e.area ? '<br>' + esc(e.area) : '') + (e.city ? '<br>' + esc(e.city) : '') + '</div>';
+
+    d.classList.add('on');
+    $('detailClose').addEventListener('click', clearSelection);
+  }
+
+  function showAggregate(lat, lng, events){
+    const d = $('detail');
+    const sorted = events.slice().sort((a, b) => new Date(b.time) - new Date(a.time));
+    const maxHail = Math.max(0, ...events.map(e => e.hail || 0));
+    const maxGust = Math.max(0, ...events.map(e => e.gust || 0));
+    const dates = events.map(e => new Date(e.time).getTime());
+    const first = new Date(Math.min(...dates));
+    const last = new Date(Math.max(...dates));
+
+    const types = {};
+    events.forEach(e => e.kinds.forEach(k => types[k] = (types[k] || 0) + 1));
+
+    const density = events.length;
+    const col = density > 5 ? 'var(--red)' : density > 2 ? 'var(--amber)' : 'var(--green)';
+
+    const listHtml = sorted.slice(0, 25).map(e => {
+      const meta = [];
+      if (e.hail > 0) meta.push('<span class="agg-hail">' + e.hail.toFixed(2) + ' in hail</span>');
+      if (e.gust > 0) meta.push('<span class="agg-wind">' + e.gust + ' mph wind</span>');
+      meta.push('<span style="color:' + (K[e.main] || K.storm).c + '">' + esc(TIER[e.lvl]) + ' · ' + esc((K[e.main] || K.storm).l) + '</span>');
+      if (e.kinds && e.kinds.length > 1) meta.push('<span class="agg-src">' + esc(e.kinds.map(k => (K[k]||K.storm).l).join(' + ')) + '</span>');
+      if (e.sources && e.sources.length) meta.push('<span class="agg-src">' + esc(e.sources.join(' · ')) + '</span>');
+      if (e.hits && e.hits.length) meta.push('<span class="agg-hail">● ' + e.hits.length + ' confirmed</span>');
+      if (e.motion) meta.push('<span class="agg-wind">' + compassName(e.motion.deg) + (e.motion.mph ? ' ' + e.motion.mph + ' mph' : '') + '</span>');
+      if (e.city) meta.push('<span class="agg-src">' + esc(e.city) + '</span>');
+      if (e.tornado) meta.push('<span class="agg-hail" style="color:var(--red)">TORNADO ' + esc(e.tornado) + '</span>');
+      if (e.threat) meta.push('<span class="agg-hail" style="color:var(--red)">' + esc(e.threat) + ' THREAT</span>');
+
+      return `<div class="agg-event" data-key="${esc(e.key)}">
+        <div class="agg-dot" style="background:${(K[e.main]||K.storm).c}"></div>
+        <div class="agg-body">
+          <div class="agg-title">${esc(fmt(e.time))} · ${esc(heading(e))}</div>
+          <div class="agg-meta">${meta.join('')}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const peakHailText = maxHail > 0 ? maxHail.toFixed(2) : (events.some(e => e.kinds.includes('hail')) ? 'TAGGED' : '—');
+    const peakWindText = maxGust > 0 ? maxGust : (events.some(e => e.kinds.includes('wind')) ? 'TAGGED' : '—');
+
+    d.innerHTML = `
+      <div class="det-head">
+        <div><div class="det-k">Damage history</div><div class="det-title" style="color:${col}">${density} event${density === 1 ? '' : 's'} at this location</div></div>
+        <button class="det-close" id="detailClose" type="button">×</button>
+      </div>
+      <div class="det-grid">
+        <div class="det-cell"><small>Peak hail</small><b>${peakHailText}${maxHail > 0 ? '<span>IN</span>' : ''}</b></div>
+        <div class="det-cell"><small>Peak wind</small><b>${peakWindText}${maxGust > 0 ? '<span>MPH</span>' : ''}</b></div>
+        <div class="det-cell"><small>First hit</small><b style="font-size:9.5px;font-weight:600">${esc(fmt(first.toISOString()))}</b></div>
+        <div class="det-cell"><small>Last hit</small><b style="font-size:9.5px;font-weight:600">${esc(fmt(last.toISOString()))}</b></div>
+      </div>
+      <div class="factors" style="margin-top:12px">
+        ${Object.entries(types).map(([k, n]) => `<span class="factor" style="border-color:${(K[k]||K.storm).c}55;color:${(K[k]||K.storm).c}">${(K[k]||K.storm).l} · ${n}</span>`).join('')}
+      </div>
+      <div class="agg-list">${listHtml}</div>
+      <div class="det-meta">${Math.min(25, sorted.length)} of ${sorted.length} events · click any row to zoom</div>
+      <div class="det-meta" style="opacity:.6;margin-top:4px">${lat.toFixed(5)}, ${lng.toFixed(5)}</div>
+    `;
+
+    d.classList.add('on');
+    $('detailClose').addEventListener('click', clearSelection);
+    d.querySelectorAll('.agg-event').forEach(el => {
+      el.addEventListener('click', () => {
+        const ev = events.find(x => x.key === el.dataset.key);
+        if (ev) selectEvent(ev, true);
+      });
+    });
+  }
+
+  async function loadWinds(){
+    const rs = await Promise.allSettled(STATIONS.map(s => getJSON('https://api.weather.gov/stations/' + s[0] + '/observations/latest', 7000)));
+    const out = [];
+    rs.forEach((r, i) => {
+      if (r.status !== 'fulfilled') return;
+      const p = r.value.properties || {};
+      const dir = p.windDirection && p.windDirection.value;
+      const spd = p.windSpeed && p.windSpeed.value;
+      if (dir == null || spd == null) return;
+      out.push({id:STATIONS[i][0], name:STATIONS[i][1], lat:r.value.geometry.coordinates[1], lng:r.value.geometry.coordinates[0], dir:Number(dir), mph:spd*0.621371});
+    });
+    state.winds = out;
+    setSource('wind', out.length > 0, out.length ? out.length + ' stations' : 'unavailable');
+    if (state.layers.wind) renderMap(getShown());
+  }
+
+  /* ================================================================ */
+  /* AUTOCOMPLETE ENGINE                                              */
+  /* ================================================================ */
+  function setupAutocomplete(config){
+    const input = $(config.input);
+    const box = $(config.box);
+    const list = $(config.list);
+    const btn = $(config.btn);
+    if (!input || !box || !list || !btn) return null;
+
+    let items = [];
+    let activeIdx = -1;
+    let debounceTimer = null;
+    let currentAbort = null;
+    let lastQuery = '';
+
+    function showList(){ list.classList.add('on'); box.classList.add('focused'); }
+    function hideList(){ list.classList.remove('on'); box.classList.remove('focused'); activeIdx = -1; }
+    function reset(){ items = []; list.innerHTML = ''; activeIdx = -1; }
+
+    function renderResults(results){
+      items = results;
+      activeIdx = -1;
+      if (!results.length){
+        list.innerHTML = '<div class="ac-empty">' + esc(config.emptyMsg || 'No results') + '</div>';
+        showList();
+        return;
+      }
+      list.innerHTML = results.map((r, i) => {
+        const tag = r.near ? '<span class="ac-tag near">NEARBY</span>' : (r.far ? '<span class="ac-tag far">US</span>' : '');
+        const nameHtml = r.html || highlightMatch(r.title || '', lastQuery);
+        const subHtml = esc(r.subtitle || '');
+        return `<div class="ac-item ${config.addr ? 'addr' : ''}" data-idx="${i}" role="option">
+          <span class="ac-dot"></span>
+          <div class="ac-text">
+            <div class="ac-name">${nameHtml}</div>
+            <div class="ac-sub">${subHtml}</div>
+          </div>
+          ${tag}
+        </div>`;
+      }).join('');
+      showList();
+    }
+
+    function setActive(idx){
+      const nodes = list.querySelectorAll('.ac-item');
+      nodes.forEach((n, i) => n.classList.toggle('active', i === idx));
+      if (idx >= 0 && nodes[idx]) nodes[idx].scrollIntoView({block:'nearest'});
+      activeIdx = idx;
+    }
+
+    async function runSearch(q){
+      if (!q || q.length < config.minChars){ reset(); hideList(); return; }
+      if (currentAbort) { try { currentAbort.abort(); } catch(e){} }
+      currentAbort = new AbortController();
+      list.innerHTML = '<div class="ac-loading">Searching…</div>';
+      showList();
+      try {
+        const results = await config.fetcher(q, currentAbort.signal);
+        lastQuery = q;
+        renderResults(results || []);
+      } catch(e){
+        if (e && e.name === 'AbortError') return;
+        list.innerHTML = '<div class="ac-empty">Search failed — check connection</div>';
+        showList();
+      }
+    }
+
+    input.addEventListener('input', () => {
+      const q = input.value.trim();
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => runSearch(q), config.delay || 250);
+    });
+
+    input.addEventListener('focus', () => {
+      box.classList.add('focused');
+      if (items.length) showList();
+    });
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown'){
+        if (!list.classList.contains('on')) return;
+        e.preventDefault();
+        setActive(Math.min(items.length - 1, activeIdx + 1));
+      } else if (e.key === 'ArrowUp'){
+        if (!list.classList.contains('on')) return;
+        e.preventDefault();
+        setActive(Math.max(0, activeIdx - 1));
+      } else if (e.key === 'Enter'){
+        if (list.classList.contains('on')){
+          const pick = (activeIdx >= 0 && items[activeIdx]) ? items[activeIdx] : (items.length === 1 ? items[0] : null);
+          if (pick){
+            e.preventDefault();
+            config.onPick(pick);
+            input.blur();
+            reset();
+            hideList();
+          }
+        }
+      } else if (e.key === 'Escape'){
+        reset(); hideList();
+      }
+    });
+
+    list.addEventListener('mousedown', e => {
+      const itemEl = e.target.closest('.ac-item');
+      if (!itemEl) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const idx = parseInt(itemEl.dataset.idx, 10);
+      if (items[idx]){
+        config.onPick(items[idx]);
+        reset();
+        hideList();
+        input.blur();
+      }
+    });
+
+    btn.addEventListener('click', () => {
+      if (list.classList.contains('on') && activeIdx >= 0 && items[activeIdx]){
+        config.onPick(items[activeIdx]);
+        reset();
+        hideList();
+        input.blur();
+        return;
+      }
+      const q = input.value.trim();
+      if (q.length >= config.minChars) runSearch(q);
+    });
+
+    document.addEventListener('mousedown', e => {
+      if (!box.contains(e.target)) hideList();
+    });
+
+    return { runSearch, hideList };
+  }
+
+  /* ================================================================ */
+  /* COUNTY SEARCH                                                    */
+  /* ================================================================ */
+  const COUNTY_FALLBACKS = [
+    'Maricopa','Pima','Pinal','Yavapai','Yuma','Mohave','Coconino','Cochise','Navajo','Apache',
+    'La Paz','Gila','Santa Cruz','Graham','Greenlee',
+    'Los Angeles','San Diego','Orange','Riverside','San Bernardino','Santa Clara','Alameda','Sacramento',
+    'Harris','Dallas','Tarrant','Bexar','Travis','Cook','Kings','Queens','New York','Middlesex',
+    'King','Pierce','Snohomish','Whatcom','Clark','Multnomah','Denver','El Paso','Jefferson','Miami-Dade',
+    'Broward','Palm Beach','Hillsborough','Pinellas','Duval','Orange','Fulton','Cobb','DeKalb','Mecklenburg',
+    'Wake','Davidson','Shelby','Marion','Wayne','Oakland','Macomb','Cuyahoga','Franklin','Hamilton',
+    'Allegheny','Philadelphia','Montgomery','Baltimore','Prince George\'s','Fairfax','Loudoun',
+    'Salt Lake','Utah','Washington','Clackamas','Lane','Marion','Polk','Johnson','Jackson','St. Louis'
+  ];
+
+  const STATE_NAMES = {
+    '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT','10':'DE','11':'DC','12':'FL',
+    '13':'GA','15':'HI','16':'ID','17':'IL','18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME',
+    '24':'MD','25':'MA','26':'MI','27':'MN','28':'MS','29':'MO','30':'MT','31':'NE','32':'NV','33':'NH',
+    '34':'NJ','35':'NM','36':'NY','37':'NC','38':'ND','39':'OH','40':'OK','41':'OR','42':'PA','44':'RI',
+    '45':'SC','46':'SD','47':'TN','48':'TX','49':'UT','50':'VT','51':'VA','53':'WA','54':'WV','55':'WI','56':'WY'
+  };
+  function stateName(code){ return STATE_NAMES[String(code||'').padStart(2,'0')] || code || ''; }
+
+  async function fetchCountySuggestions(q, signal){
+    const ql = q.toLowerCase();
+
+    const localMatches = COUNTY_FALLBACKS
+      .filter(n => n.toLowerCase().includes(ql))
+      .slice(0, 8)
+      .map(n => ({
+        kind: 'county',
+        name: n,
+        title: n + ' County',
+        subtitle: 'US county',
+        countyname: n
+      }));
+
+    let remote = [];
+    try {
+      const where = "UPPER(NAME) LIKE '%" + q.toUpperCase().replace(/'/g, "''") + "%'";
+      const url = TIGER + '?where=' + encodeURIComponent(where) +
+                  '&outFields=NAME,STATE,COUNTY&returnGeometry=false&f=json&resultRecordCount=20';
+      const r = await fetch(url, {signal, cache:'no-store'});
+      if (r.ok){
+        const j = await r.json();
+        remote = (j.features || []).map(f => ({
+          kind: 'county',
+          name: f.attributes.NAME,
+          title: f.attributes.NAME + ' County',
+          subtitle: stateName(f.attributes.STATE) + ' · ' + f.attributes.NAME,
+          countyname: f.attributes.NAME,
+          stateFips: f.attributes.STATE
+        }));
+      }
+    } catch(e){}
+
+    const seen = new Set(localMatches.map(m => (m.countyname || '').toLowerCase()));
+    const merged = localMatches.slice();
+    remote.forEach(m => {
+      const key = (m.countyname || '').toLowerCase();
+      if (!seen.has(key)){ seen.add(key); merged.push(m); }
+    });
+
+    return merged.slice(0, 15);
+  }
+
+  async function pickCounty(result){
+    $('countySearch').value = result.title || (result.countyname + ' County');
+
+    try {
+      const feats = await fetchCountyFromTIGER(result.countyname);
+      const feats2 = result.stateFips ? feats.filter(f => f.properties.STATE === result.stateFips) : [];
+      const chosen = (feats2.length ? feats2 : feats)[0];
+      if (!chosen) throw new Error('no geom');
+      await setCountyFromGeometry(chosen.geometry, chosen.properties.NAME + ' County');
+    } catch(e) {
+      try {
+        const url = NOMINATIM + '?q=' + encodeURIComponent(result.title + ', USA') +
+                    '&polygon_geojson=1&format=jsonv2&limit=1&addressdetails=1';
+        const results = await getJSON(url, 10000);
+        const county = results.find(r => (r.addresstype === 'county' || r.geojson) && r.geojson);
+        if (!county) throw new Error('no boundary');
+        await setCountyFromGeometry(county.geojson, county.display_name.split(',')[0]);
+      } catch(e2){
+        $('status').textContent = 'Could not load boundary for ' + result.title;
+      }
+    }
+  }
+
+  /* ================================================================ */
+  /* ADDRESS SEARCH                                                   */
+  /* ================================================================ */
+  async function fetchAddressSuggestions(q, signal){
+    const b = currentCounty.bounds;
+    const viewbox = [b.getWest().toFixed(4), b.getNorth().toFixed(4), b.getEast().toFixed(4), b.getSouth().toFixed(4)].join(',');
+
+    const url = NOMINATIM +
+      '?q=' + encodeURIComponent(q) +
+      '&format=jsonv2&limit=12&addressdetails=1' +
+      '&countrycodes=us' +
+      '&viewbox=' + viewbox + '&bounded=0';
+
+    const r = await fetch(url, {signal, cache:'no-store', headers:{'Accept':'application/json'}});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const arr = await r.json();
+
+    const center = currentCounty.bounds.getCenter();
+    const geo = currentCounty.geometry;
+
+    const mapped = (arr || []).map(item => {
+      const lat = parseFloat(item.lat);
+      const lng = parseFloat(item.lon);
+      const inCounty = geo ? inside(lng, lat, geo) : false;
+      const distKm = haversine(lat, lng, center.lat, center.lng);
+      const display = item.display_name || '';
+      const parts = display.split(',').map(s => s.trim());
+      const title = (item.name && item.name.length > 1) ? item.name : (parts[0] || display);
+      const sub = parts.slice(1).join(', ') || display;
+      return {
+        kind: 'addr',
+        lat, lng,
+        title,
+        subtitle: sub,
+        display,
+        near: inCounty,
+        far: !inCounty,
+        distKm
+      };
+    });
+
+    mapped.sort((a, b) => {
+      if (a.near !== b.near) return a.near ? -1 : 1;
+      return a.distKm - b.distKm;
+    });
+
+    return mapped;
+  }
+
+  async function pickAddress(result){
+    $('addrSearch').value = result.title;
+    dropAddressMarker(result.lat, result.lng, result.display || result.title);
+    map.flyTo([result.lat, result.lng], 15, {duration: 0.9});
+
+    if (longMode()){
+      const hits = getShown().filter(e => {
+        if (e.geom && e.geom.type !== 'Point') return inside(result.lng, result.lat, e.geom);
+        return haversine(result.lat, result.lng, e.lat, e.lng) < 2;
+      });
+      if (hits.length){
+        showAggregate(result.lat, result.lng, hits);
+      } else {
+        const d = $('detail');
+        d.innerHTML = `
+          <div class="det-head">
+            <div><div class="det-k">Damage history</div><div class="det-title" style="color:var(--green)">No events at this address</div></div>
+            <button class="det-close" id="detailClose" type="button">×</button>
+          </div>
+          <div class="det-meta">
+            <b>${esc(result.title)}</b><br>
+            ${esc(result.display || '')}<br><br>
+            Zero recorded storm events in the selected window.
+          </div>
+        `;
+        d.classList.add('on');
+        $('detailClose').addEventListener('click', clearSelection);
+      }
+    }
+  }
+
+  /* ================================================================ */
+  /* CONTROLS                                                         */
+  /* ================================================================ */
+  function buildControls(){
+    const mk = (host, txt, cls, fn) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = cls; b.innerHTML = txt;
+      b.addEventListener('click', fn);
+      $(host).appendChild(b);
+      return b;
+    };
+
+    WINDOWS.forEach(w => {
+      const cls = 'chip' + (w.live ? ' livechip' : '');
+      const b = mk('windowsShort', w.l, cls, () => setWin(w.k));
+      b.dataset.k = w.k;
+    });
+
+    ['hail','wind','tornado','dust','flood'].forEach(k => {
+      const b = mk('kinds', '<span>' + K[k].l + '</span>', 'chip hz', () => {
+        if (state.on.has(k)) state.on.delete(k); else state.on.add(k);
+        syncControls(); saveState(); renderAll(false);
+      });
+      b.dataset.k = k;
+      b.style.setProperty('--k', K[k].c);
+    });
+
+    LEVELS.forEach(s => {
+      const b = mk('levels', s.l, 'chip', () => { state.min = s.v; syncControls(); saveState(); renderAll(false); });
+      b.dataset.v = s.v;
+    });
+
+    let sliderDebounce = null;
+    $('daySlider').addEventListener('input', e => {
+      state.customDays = Math.max(1, Math.min(365, +e.target.value));
+      $('dayValue').textContent = state.customDays + (state.customDays === 1 ? ' DAY' : ' DAYS');
+      saveState();
+      if (state.win === 'custom'){
+        clearTimeout(sliderDebounce);
+        sliderDebounce = setTimeout(() => load(true), 400);
+      }
+    });
+
+    $('goBtn').addEventListener('click', () => {
+      if (state.win === 'custom'){
+        setWin(state.lastWin && state.lastWin !== 'custom' ? state.lastWin : '1d');
+      } else {
+        state.lastWin = state.win;
+        setWin('custom');
+      }
+    });
+
+    $('modeHistory').addEventListener('click', () => {
+      if (state.win === 'live' || state.win === 'custom') setWin('1d');
+    });
+    $('modeLive').addEventListener('click', () => setWin('live'));
+
+    $('toolWarn').addEventListener('click', () => { state.layers.warn = !state.layers.warn; syncTools(); saveState(); renderMap(getShown()); });
+    $('toolWind').addEventListener('click', () => { state.layers.wind = !state.layers.wind; syncTools(); saveState(); renderMap(getShown()); });
+    $('toolReports').addEventListener('click', () => { state.layers.reports = !state.layers.reports; syncTools(); saveState(); renderMap(getShown()); });
+    $('toolRecenter').addEventListener('click', () => {
+      const wide = window.innerWidth > 880;
+      map.flyToBounds(currentCounty.bounds, {
+        paddingTopLeft: wide ? [430,90] : [30,70],
+        paddingBottomRight: wide ? [80,80] : [30,70],
+        duration: 0.7
+      });
+    });
+
+    $('demoBtn').addEventListener('click', () => {
+      state.demo = !state.demo;
+      $('demoBtn').textContent = state.demo ? 'HIDE SAMPLE STORM' : 'LOAD SAMPLE STORM';
+      renderAll(false);
+    });
+
+    $('panelClose').addEventListener('click', () => {
+      $('panel').classList.add('closed');
+      $('panelReopen').classList.add('on');
+      if (state.selected) clearSelection();
+    });
+    $('panelReopen').addEventListener('click', () => {
+      $('panel').classList.remove('closed');
+      $('panelReopen').classList.remove('on');
+    });
+
+    document.querySelectorAll('.bmbtn').forEach(b => {
+      b.classList.toggle('on', b.dataset.bm === state.basemap);
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.bmbtn').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        state.basemap = b.dataset.bm;
+        applyBasemap(state.basemap);
+        saveState();
+      });
+    });
+
+    syncControls();
+    syncTools();
+  }
+
+  function setWin(k){
+    if (k !== 'custom') state.lastWin = k;
+    state.win = k;
+    syncControls();
+    saveState();
+    load(true);
+    startTimers();
+    if (isLive()) loadRadar(); else syncRadar();
+  }
+
+  function syncControls(){
+    document.querySelectorAll('#windowsShort .chip').forEach(b => {
+      const on = b.dataset.k === state.win;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('#kinds .chip').forEach(b => {
+      const on = state.on.has(b.dataset.k);
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('#levels .chip').forEach(b => {
+      const on = Number(b.dataset.v) === state.min;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+
+    const live = isLive();
+    const custom = state.win === 'custom';
+
+    const goBtn = $('goBtn');
+    goBtn.classList.toggle('on', custom);
+    $('goBtnText').textContent = custom ? '● DAMAGE HISTORY ACTIVE' : 'GO — SHOW DAMAGE HISTORY';
+
+    $('dayValue').textContent = state.customDays + (state.customDays === 1 ? ' DAY' : ' DAYS');
+    if (+$('daySlider').value !== state.customDays) $('daySlider').value = state.customDays;
+
+    $('modeHistory').classList.toggle('on', !live);
+    $('modeLive').classList.toggle('on', live);
+    $('livePill').classList.toggle('on', live);
+    $('feedMode').textContent = live ? 'LIVE' : (custom ? 'DAMAGE' : 'HISTORY');
+    $('feedMode').style.color = live ? 'var(--green)' : (custom ? 'var(--red)' : 'var(--cyan)');
+
+    syncRadar();
+  }
+
+  function syncTools(){
+    $('toolWarn').classList.toggle('on', state.layers.warn);
+    $('toolWind').classList.toggle('on', state.layers.wind);
+    $('toolReports').classList.toggle('on', state.layers.reports);
+    ['toolWarn','toolWind','toolReports'].forEach(id => {
+      $(id).setAttribute('aria-pressed', $(id).classList.contains('on') ? 'true' : 'false');
+    });
+  }
+
+  function startTimers(){
+    clearInterval(state.timers.alerts);
+    clearInterval(state.timers.radar);
+    clearInterval(state.timers.wind);
+    state.timers.wind = setInterval(() => loadWinds(), 120000);
+    state.timers.radar = setInterval(() => { if (isLive()) loadRadar(); }, 180000);
+    if (isLive()){
+      state.timers.alerts = setInterval(() => load(false), 60000);
+    }
+  }
+
+  function tick(){ $('clock').textContent = new Date().toLocaleTimeString([], {hour12:false}); }
+  setInterval(tick, 1000); tick();
+
+  /* ================================================================ */
+  /* DETECTOR BRIDGE — export storm polygons to the settings page    */
+  /* ================================================================ */
+  function openHouseDetector(){
+    const shown = getShown();
+    const polygons = [];
+    shown.forEach((e, i) => {
+      if (e.geom && e.geom.type !== 'Point'){
+        polygons.push({
+          id: e.key || ('storm-' + i),
+          label: heading(e) + ' · ' + fmt(e.time),
+          geometry: e.geom
+        });
+      }
+    });
+
+    if (polygons.length === 0){
+      alert('No storm polygons on the map right now.\nLoad a HISTORY or LIVE window with active storms first.');
+      return;
+    }
+
+    const win = state.win === 'custom'
+      ? state.customDays + 'D'
+      : ((WINDOWS.find(x => x.k === state.win) || {}).l || '');
+
+    sessionStorage.setItem('hailpath.pendingMatch', JSON.stringify({
+      polygons,
+      timeRange: win + ' window',
+      capturedAt: new Date().toISOString()
+    }));
+
+    window.open('settings.html', '_blank');
+  }
+
+  $('detectBtn').addEventListener('click', openHouseDetector);
+
+  /* ================================================================ */
+  /* INIT                                                             */
+  /* ================================================================ */
+  loadState();
+  applyBasemap(state.basemap);
+  buildControls();
+  setupAutocomplete({
+    input: 'countySearch',
+    box: 'countyBox',
+    list: 'countyAC',
+    btn: 'countySearchBtn',
+    minChars: 2,
+    delay: 250,
+    emptyMsg: 'No counties match',
+    fetcher: fetchCountySuggestions,
+    onPick: pickCounty
+  });
+  setupAutocomplete({
+    input: 'addrSearch',
+    box: 'addrBox',
+    list: 'addrAC',
+    btn: 'addrSearchBtn',
+    minChars: 3,
+    delay: 400,
+    addr: true,
+    emptyMsg: 'No addresses match',
+    fetcher: fetchAddressSuggestions,
+    onPick: pickAddress
+  });
+  loadCountyOutlines();
+  loadInitialCounty();
+  loadWinds();
+  startTimers();
+  if (isLive()) loadRadar();
+
+  setTimeout(() => $('boot').classList.add('gone'), 1400);
+  setTimeout(() => $('boot').remove(), 2200);
+});
+})();
+</script>
+</body>
+</html>
