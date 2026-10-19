@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HailPath — Matched Houses</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050a10;--panel:#08111b;--panel2:#0b1622;
+  --line:rgba(120,200,255,.14);--line2:rgba(120,200,255,.32);
+  --ink:#dceaf5;--mute:#7c93a8;--dim:#546a7d;
+  --cyan:#5ee7ff;--amber:#ffc857;--red:#ff4d6d;--green:#3ddc84;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif;min-height:100vh}
+body{padding:24px 16px 40px}
+.wrap{max-width:1400px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:11px;margin-bottom:24px}
+.logo{width:32px;height:32px;border:1px solid rgba(94,231,255,.55);display:grid;place-items:center;color:var(--cyan);font:800 14px "JetBrains Mono",monospace;box-shadow:0 0 14px rgba(94,231,255,.22)}
+.brandtext b{display:block;font:800 13px/1 Manrope;letter-spacing:.2em;text-transform:uppercase}
+.brandtext b em{font-style:normal;color:var(--cyan)}
+.brandtext span{display:block;font:500 8px/1 "JetBrains Mono",monospace;letter-spacing:.22em;color:var(--mute);margin-top:5px}
+
+h1{font:800 22px/1.1 Manrope;letter-spacing:.06em;margin:0 0 6px;text-transform:uppercase}
+h1 em{font-style:normal;color:var(--cyan)}
+.sub{font:500 9px/1 "JetBrains Mono",monospace;letter-spacing:.24em;color:var(--mute);margin-bottom:20px;text-transform:uppercase}
+
+.bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.bar button{background:rgba(94,231,255,.08);border:1px solid rgba(94,231,255,.35);color:var(--cyan);font:700 9px/1 "JetBrains Mono",monospace;letter-spacing:.14em;padding:11px 16px;border-radius:3px;cursor:pointer;transition:.15s}
+.bar button:hover{background:rgba(94,231,255,.18);box-shadow:0 0 12px rgba(94,231,255,.15)}
+.bar button:disabled{opacity:.35;cursor:not-allowed}
+
+.table-wrap{border:1px solid var(--line);border-radius:4px;overflow:auto;max-height:calc(100vh - 260px);background:var(--panel)}
+table{width:100%;border-collapse:collapse;font:500 10.5px/1.4 "JetBrains Mono",monospace;min-width:900px}
+thead th{position:sticky;top:0;background:#0b1622;color:var(--dim);font:700 8px/1 "JetBrains Mono",monospace;letter-spacing:.16em;text-align:left;padding:12px 10px;text-transform:uppercase;border-bottom:1px solid var(--line2);z-index:2;white-space:nowrap}
+tbody td{padding:10px;border-bottom:1px solid var(--line);color:var(--ink);white-space:nowrap}
+tbody td.wrap-ok{white-space:normal;max-width:260px}
+tbody tr:hover td{background:rgba(94,231,255,.045)}
+tbody tr:last-child td{border-bottom:0}
+.roof-as{color:var(--cyan);font-weight:700}
+.roof-ab{color:var(--amber);font-weight:700}
+
+.empty{padding:60px 20px;text-align:center;color:var(--mute);font:500 11px/1.7 "JetBrains Mono",monospace;background:var(--panel);border:1px solid var(--line);border-radius:4px}
+.empty b{color:var(--cyan)}
+
+@media(max-width:640px){
+  body{padding:16px 10px 32px}
+  h1{font-size:18px}
+  .bar button{font-size:8px;padding:9px 12px;flex:1}
+  .table-wrap{max-height:calc(100vh - 320px)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="logo">H</div>
+    <div class="brandtext">
+      <b>HAIL<em>PATH</em></b>
+      <span>MATCHED HOUSES</span>
+    </div>
+  </div>
+
+  <h1>Matched <em>Houses</em></h1>
+  <div class="sub" id="sub">Loading results…</div>
+
+  <div class="bar">
+    <button id="csvAS" type="button">EXPORT AS - ASPHALT CSV</button>
+    <button id="csvAB" type="button">EXPORT AB - ASBESTOS CSV</button>
+    <button id="csvAll" type="button">EXPORT ALL (CSV)</button>
+    <button id="backBtn" type="button" onclick="location.href='settings.html'">← BACK TO DETECTOR</button>
+  </div>
+
+  <div id="out"></div>
+</div>
+
+<script>
+const data = JSON.parse(sessionStorage.getItem('hailpath.lastMatches') || 'null');
+const out  = document.getElementById('out');
+const sub  = document.getElementById('sub');
+
+if (!data || !data.parcels || data.parcels.length === 0) {
+  sub.textContent = 'NO RESULTS';
+  out.innerHTML = '<div class="empty">No matches yet.<br><br>Go back to <b>settings.html</b> and run the detector.</div>';
+  document.querySelectorAll('.bar button[id^=csv]').forEach(b => b.disabled = true);
+} else {
+  const parcels = data.parcels;
+  const asCount = parcels.filter(p => p.roof_code === 'AS - ASPHALT').length;
+  const abCount = parcels.filter(p => p.roof_code.startsWith('AB -')).length;
+  sub.textContent = `${parcels.length} HOUSES MATCHED · AS ${asCount} · AB ${abCount}`;
+
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  const rows = parcels.map(p => `
+    <tr>
+      <td>${esc(p.apn)}</td>
+      <td class="wrap-ok">${esc(p.owner)}</td>
+      <td class="wrap-ok">${esc(p.address)}</td>
+      <td>${esc(p.city)}</td>
+      <td>${esc(p.state)}</td>
+      <td>${esc(p.zip)}</td>
+      <td class="${p.roof_code.startsWith('AS') ? 'roof-as' : 'roof-ab'}">${esc(p.roof_code)}</td>
+      <td>${p.year_built || '—'}</td>
+      <td>${p.sqft || '—'}</td>
+    </tr>
+  `).join('');
+
+  out.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>APN</th><th>Owner</th><th>Address</th><th>City</th><th>ST</th>
+      <th>ZIP</th><th>Roof</th><th>Built</th><th>Sq Ft</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const toCsv = list => {
+    const head = 'Owner,Address,City,State,ZIP,APN,Roof,Yr Built,Sq Ft';
+    return [head, ...list.map(p => [
+      p.owner, p.address, p.city, p.state, p.zip,
+      p.apn, p.roof_code, p.year_built, p.sqft
+    ].map(q).join(','))].join('\n');
+  };
+  const download = (name, txt) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv' }));
+    a.download = name;
+    a.click();
+  };
+  const stamp = () => new Date().toISOString().slice(0, 10);
+
+  document.getElementById('csvAS').onclick = () =>
+    download(`hailpath_asphalt_${stamp()}.csv`, toCsv(parcels.filter(p => p.roof_code === 'AS - ASPHALT')));
+  document.getElementById('csvAB').onclick = () =>
+    download(`hailpath_asbestos_${stamp()}.csv`, toCsv(parcels.filter(p => p.roof_code.startsWith('AB -'))));
+  document.getElementById('csvAll').onclick = () =>
+    download(`hailpath_all_${stamp()}.csv`, toCsv(parcels));
+}
+</script>
+</body>
+</html>
