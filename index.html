@@ -1819,7 +1819,7 @@ whenReady(function init(){
     if (duckdbDb) return duckdbDb;
     if (!duckdbModule){
       // Use the dev build that fixed the home‑directory / extension‑autoload
-      // bug present in 1.28.0. See duckdb-wasm discussion #1818.
+      // bug present in 1.28.0. Version must include the ".0" suffix.
       duckdbModule = await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.1-dev106.0/+esm');
     }
     const duckdb = duckdbModule;
@@ -1836,13 +1836,14 @@ whenReady(function init(){
 
     const conn = await db.connect();
 
-    // Belt‑and‑suspenders: point at /tmp even though the dev build already
-    // handles the home directory internally.
+    // Point DuckDB at /tmp before INSTALL spatial (belt‑and‑suspenders).
     await conn.query("SET home_directory = '/tmp';");
 
     await conn.query('INSTALL spatial');
     await conn.query('LOAD spatial');
-    await conn.query('SET geometry_always_xy = true');
+    // Note: geometry_always_xy is not recognised by the 1.28.1-dev106 build,
+    // so we omit it. ST_Point(lon, lat) and GeoJSON [lon, lat] already give
+    // us the correct (x=lon, y=lat) order for ST_Contains.
     await conn.close();
 
     duckdbDb = db;
