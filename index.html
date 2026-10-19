@@ -104,11 +104,12 @@ button{font-family:inherit}
 .p-body::-webkit-scrollbar-thumb{background:rgba(94,231,255,.18);border-radius:3px}
 .p-body::-webkit-scrollbar-track{background:transparent}
 
-.mode{display:grid;grid-template-columns:1fr 1fr;margin:12px 17px 0;border:1px solid var(--line);border-radius:3px;overflow:hidden}
-.mode button{background:transparent;border:0;color:var(--dim);font:700 9px/1 "JetBrains Mono",monospace;letter-spacing:.22em;padding:12px 0;cursor:pointer;transition:.15s}
+.mode{display:grid;grid-template-columns:1fr 1fr 1fr;margin:12px 17px 0;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.mode button{background:transparent;border:0;color:var(--dim);font:700 9px/1 "JetBrains Mono",monospace;letter-spacing:.16em;padding:12px 0;cursor:pointer;transition:.15s}
 .mode button:hover{color:var(--ink)}
 .mode button.on{color:var(--cyan);background:linear-gradient(180deg,rgba(94,231,255,.16),rgba(94,231,255,.04));box-shadow:inset 0 -2px 0 var(--cyan)}
 .mode button.live.on{color:var(--green);background:linear-gradient(180deg,rgba(61,220,132,.16),rgba(61,220,132,.04));box-shadow:inset 0 -2px 0 var(--green)}
+.mode button.detector.on{color:var(--amber);background:linear-gradient(180deg,rgba(255,200,87,.16),rgba(255,200,87,.04));box-shadow:inset 0 -2px 0 var(--amber)}
 
 .sec{padding:14px 17px 0}
 .sec h2{display:flex;align-items:center;gap:8px;margin:0 0 8px;font:600 8px/1 "JetBrains Mono",monospace;letter-spacing:.24em;color:var(--dim);text-transform:uppercase}
@@ -119,6 +120,9 @@ button{font-family:inherit}
 .chip:hover{border-color:var(--line2);color:var(--ink)}
 .chip.on{background:rgba(94,231,255,.11);border-color:rgba(94,231,255,.55);color:var(--cyan);box-shadow:0 0 16px rgba(94,231,255,.1)}
 .chip.livechip.on{background:rgba(61,220,132,.11);border-color:rgba(61,220,132,.55);color:var(--green);box-shadow:0 0 16px rgba(61,220,132,.1)}
+.chip.amberchip{background:rgba(255,200,87,.06);border-color:rgba(255,200,87,.32);color:var(--amber)}
+.chip.amberchip:hover{background:rgba(255,200,87,.15);border-color:rgba(255,200,87,.6)}
+.chip.amberchip.on{background:rgba(255,200,87,.18);border-color:rgba(255,200,87,.7);color:var(--amber);box-shadow:0 0 16px rgba(255,200,87,.18)}
 .hz{display:flex;align-items:center;justify-content:center;gap:6px}
 .hz::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--k);flex:none;box-shadow:0 0 8px var(--k)}
 .hz:not(.on){opacity:.55}
@@ -135,17 +139,13 @@ button{font-family:inherit}
 .go-btn:hover{background:rgba(255,77,109,.14);border-color:rgba(255,77,109,.5);color:#ff8ea0}
 .go-btn.on{background:rgba(255,77,109,.22);border-color:#ff4d6d;color:#ffb0bd;box-shadow:0 0 18px rgba(255,77,109,.22),inset 0 0 20px rgba(255,77,109,.08)}
 
-/* NEW: Detector bridge button */
-.detect-btn{width:100%;margin-top:12px;padding:13px 0;background:rgba(94,231,255,.08);border:1px solid rgba(94,231,255,.45);color:var(--cyan);font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.18em;border-radius:3px;cursor:pointer;transition:.18s}
-.detect-btn:hover{background:rgba(94,231,255,.18);border-color:rgba(94,231,255,.75);box-shadow:0 0 22px rgba(94,231,255,.22)}
-.detect-btn:active{transform:translateY(1px)}
-
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);margin:14px 17px 0;border:1px solid var(--line);border-radius:3px;overflow:hidden}
 .stat{background:var(--panel);padding:10px 11px}
 .stat b{display:block;font:700 21px/1 "JetBrains Mono",monospace;letter-spacing:-.02em}
 .stat b.cyan{color:var(--cyan)}
 .stat b.amber{color:var(--amber)}
 .stat b.green{color:var(--green)}
+.stat b.red{color:var(--red)}
 .stat small{display:block;margin-top:6px;font:600 7px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
 
 #status{padding:10px 17px 8px;font:500 8.5px/1.5 "JetBrains Mono",monospace;letter-spacing:.04em;color:var(--mute);min-height:2.6em}
@@ -180,6 +180,40 @@ button{font-family:inherit}
 .dx i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px}
 .dx b{color:var(--ink);font-weight:600}
 .foot{padding:10px 17px 14px;color:var(--dim);font:500 7.5px/1.6 "JetBrains Mono",monospace;letter-spacing:.03em;border-top:1px solid var(--line);margin-top:8px}
+
+/* ---- DETECTOR TAB ---- */
+.det-hint{font:500 9.5px/1.7 "JetBrains Mono",monospace;color:var(--mute);margin:0 0 10px;padding:10px 12px;border:1px dashed rgba(255,200,87,.35);border-radius:3px;background:rgba(255,200,87,.03)}
+.det-hint b{color:var(--amber);font-weight:700}
+.det-sel-btns{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+.det-sel-btns .chip{padding:10px 0}
+.det-sel-list{font:500 9px/1.5 "JetBrains Mono",monospace;color:var(--dim);padding:8px 10px;border:1px solid var(--line);border-radius:3px;background:rgba(0,0,0,.2);max-height:120px;overflow-y:auto}
+.det-sel-list::-webkit-scrollbar{width:4px}
+.det-sel-list::-webkit-scrollbar-thumb{background:rgba(255,200,87,.25);border-radius:2px}
+.det-sel-list .item{padding:5px 0;border-bottom:1px dotted rgba(120,200,255,.08);color:var(--ink);font-weight:600;font-size:9px;line-height:1.4}
+.det-sel-list .item:last-child{border-bottom:0}
+.det-sel-list .empty-small{padding:14px 0;text-align:center;color:var(--mute);font-weight:500}
+.det-check{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid var(--line);border-radius:3px;margin-bottom:5px;cursor:pointer;transition:.15s;font:500 10px/1 Manrope;color:var(--ink)}
+.det-check:last-child{margin-bottom:0}
+.det-check:hover{border-color:var(--line2)}
+.det-check input{accent-color:var(--amber);margin:0;flex:none}
+.det-check code{font:700 9.5px/1 "JetBrains Mono",monospace;color:var(--amber);letter-spacing:.04em}
+.det-check .hint{font:500 8px/1 "JetBrains Mono",monospace;color:var(--dim);margin-left:auto;letter-spacing:.08em}
+.det-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;font:500 9.5px/1.4 "JetBrains Mono",monospace;color:var(--mute)}
+.det-row input{background:#0b1622;border:1px solid var(--line);color:var(--ink);font:600 10px/1 "JetBrains Mono",monospace;padding:7px 10px;border-radius:3px;width:130px;text-align:right}
+.det-row input:focus{outline:none;border-color:rgba(255,200,87,.55);box-shadow:0 0 12px rgba(255,200,87,.15)}
+.det-run-btn{width:100%;padding:13px 0;background:rgba(255,200,87,.08);border:1px solid rgba(255,200,87,.42);color:var(--amber);font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.18em;border-radius:3px;cursor:pointer;transition:.18s}
+.det-run-btn:hover:not(:disabled){background:rgba(255,200,87,.18);border-color:rgba(255,200,87,.75);box-shadow:0 0 22px rgba(255,200,87,.22)}
+.det-run-btn:disabled{opacity:.45;cursor:wait}
+.det-status{padding:10px 17px 6px;font:500 8.5px/1.5 "JetBrains Mono",monospace;letter-spacing:.04em;color:var(--mute);min-height:2.4em}
+.det-status.err{color:var(--red)}
+.det-status.ok{color:var(--green)}
+.det-actions{display:none;flex-direction:column;gap:5px;padding:14px 17px 0}
+.det-actions.show{display:flex}
+.det-actions .det-full-btn{display:block;width:100%;text-align:center;text-decoration:none;padding:11px 0;background:rgba(255,200,87,.08);border:1px solid rgba(255,200,87,.42);color:var(--amber);font:700 9px/1 "JetBrains Mono",monospace;letter-spacing:.18em;border-radius:3px;cursor:pointer;transition:.15s}
+.det-actions .det-full-btn:hover{background:rgba(255,200,87,.18);border-color:rgba(255,200,87,.75);box-shadow:0 0 18px rgba(255,200,87,.2)}
+.det-csv-row{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.det-csv{background:rgba(94,231,255,.06);border:1px solid rgba(94,231,255,.28);color:var(--cyan);font:700 8px/1 "JetBrains Mono",monospace;letter-spacing:.12em;padding:9px 0;border-radius:3px;cursor:pointer;transition:.15s}
+.det-csv:hover{background:rgba(94,231,255,.15);border-color:rgba(94,231,255,.55)}
 
 #maptools{position:absolute;z-index:650;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}
 .tool{width:38px;height:38px;display:grid;place-items:center;background:rgba(8,17,27,.92);border:1px solid var(--line);border-radius:3px;color:var(--dim);cursor:pointer;position:relative;transition:.15s;backdrop-filter:blur(10px)}
@@ -255,6 +289,7 @@ button{font-family:inherit}
 .evt-tip::before{display:none!important}
 .evt-label{background:rgba(5,10,16,.82)!important;border:1px solid var(--line)!important;color:var(--ink)!important;font:700 8px/1 "JetBrains Mono",monospace!important;letter-spacing:.06em!important;padding:4px 6px!important;border-radius:2px!important;box-shadow:none!important}
 .evt-label::before{display:none!important}
+.evt-label.sel-label{background:rgba(255,200,87,.92)!important;color:#08111b!important;border-color:var(--amber)!important;font-weight:800!important}
 .pulse{animation:pulseStroke 2.2s ease-in-out infinite}
 @keyframes pulseStroke{0%,100%{stroke-opacity:.06}50%{stroke-opacity:.38}}
 
@@ -272,7 +307,7 @@ button{font-family:inherit}
   #searchCluster{max-width:none;width:100%;order:3}
 }
 @media(max-width:880px){
-  #panel{left:8px;right:8px;top:auto;bottom:8px;width:auto;height:58%;border-radius:4px}
+  #panel{left:8px;right:8px;top:auto;bottom:8px;width:auto;height:62%;border-radius:4px}
   #panel.closed{transform:translateY(115%)}
   #panelReopen{left:50%;right:auto;bottom:8px;top:auto;transform:translateX(-50%)}
   #detail{left:8px;right:8px;top:74px;width:auto;max-height:38vh;overflow:auto}
@@ -352,57 +387,123 @@ button{font-family:inherit}
     <div class="mode" role="group" aria-label="View mode">
       <button id="modeHistory" class="on" type="button">HISTORY</button>
       <button id="modeLive" class="live" type="button">LIVE</button>
+      <button id="modeDetector" class="detector" type="button">DETECTOR</button>
     </div>
 
-    <section class="sec">
-      <h2>Time window</h2>
-      <div class="g4" id="windowsShort"></div>
-    </section>
+    <!-- ============================ THREAT VIEW ============================ -->
+    <div id="threatView">
+      <section class="sec">
+        <h2>Time window</h2>
+        <div class="g4" id="windowsShort"></div>
+      </section>
 
-    <section class="sec">
-      <h2>Damage history</h2>
-      <div class="slider-row">
-        <input type="range" id="daySlider" min="1" max="365" value="30" step="1" class="day-slider">
-        <div class="slider-labels">
-          <span>1D</span>
-          <span id="dayValue" class="slider-value">30 DAYS</span>
-          <span>365D</span>
+      <section class="sec">
+        <h2>Damage history</h2>
+        <div class="slider-row">
+          <input type="range" id="daySlider" min="1" max="365" value="30" step="1" class="day-slider">
+          <div class="slider-labels">
+            <span>1D</span>
+            <span id="dayValue" class="slider-value">30 DAYS</span>
+            <span>365D</span>
+          </div>
+        </div>
+        <button id="goBtn" class="go-btn" type="button">
+          <span id="goBtnText">GO — SHOW DAMAGE HISTORY</span>
+        </button>
+      </section>
+
+      <section class="sec">
+        <h2>Threat types</h2>
+        <div class="g3" id="kinds"></div>
+      </section>
+
+      <section class="sec">
+        <h2>Risk floor</h2>
+        <div class="g4" id="levels"></div>
+      </section>
+
+      <div class="stats">
+        <div class="stat"><b id="sN" class="cyan">0</b><small>Unique storms</small></div>
+        <div class="stat"><b id="sTop" class="amber">–</b><small>Highest risk</small></div>
+        <div class="stat"><b id="sConf" class="green">0</b><small>Ground confirmed</small></div>
+      </div>
+
+      <div id="status">Connecting to threat feeds…</div>
+      <ul id="list"></ul>
+
+      <details class="dx" open>
+        <summary>Data check</summary>
+        <div id="dxb"></div>
+      </details>
+
+      <div class="foot">
+        Aggregated sources: NWS alerts · IEM warnings · IEM ground reports · Aviation Weather METAR · RainViewer radar.
+        Duplicates within 20 km / 45 min merged into one unique storm.
+        <br><button class="linkbtn" id="demoBtn" type="button">LOAD SAMPLE STORM</button>
+      </div>
+    </div>
+
+    <!-- ========================== DETECTOR VIEW ========================== -->
+    <div id="detectorView" style="display:none">
+      <section class="sec">
+        <h2>Select storms</h2>
+        <p class="det-hint">
+          Click any <b>storm polygon</b> on the map to add it to the search.
+          Click again to deselect. Selected storms glow <b>amber</b>.
+        </p>
+        <div class="det-sel-btns">
+          <button class="chip amberchip" id="detSelectAll" type="button">SELECT ALL</button>
+          <button class="chip" id="detClearAll" type="button">CLEAR</button>
+        </div>
+        <div class="det-sel-list" id="detSelList">
+          <div class="empty-small">No storms selected — click a storm on the map</div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <h2>Roof types (exact match)</h2>
+        <label class="det-check">
+          <input type="checkbox" id="detRoofAS" checked>
+          <code>AS - ASPHALT</code>
+          <span class="hint">Asphalt shingle</span>
+        </label>
+        <label class="det-check">
+          <input type="checkbox" id="detRoofAB" checked>
+          <code>AB - ASBESTOS SHINGLE</code>
+          <span class="hint">Asbestos shingle</span>
+        </label>
+      </section>
+
+      <section class="sec">
+        <h2>Filters</h2>
+        <div class="det-row"><span>Minimum year built</span><input type="number" id="detMinYear" min="1800" max="2030" value="1900"></div>
+        <div class="det-row"><span>Maximum results</span><input type="number" id="detMaxResults" min="10" max="100000" value="20000"></div>
+      </section>
+
+      <div style="padding:14px 17px 0">
+        <button class="det-run-btn" id="detRunBtn" type="button">RUN HOUSE DETECTOR</button>
+      </div>
+
+      <div class="det-status" id="detStatus"></div>
+
+      <div class="stats" id="detStats" style="display:none;margin-top:0">
+        <div class="stat"><b class="amber" id="detTotal">0</b><small>Total hits</small></div>
+        <div class="stat"><b class="cyan" id="detAS">0</b><small>AS - ASPHALT</small></div>
+        <div class="stat"><b class="amber" id="detAB">0</b><small>AB - ASBESTOS</small></div>
+      </div>
+
+      <div class="det-actions" id="detActions">
+        <button class="det-full-btn" id="detViewFull" type="button">VIEW FULL LIST →</button>
+        <div class="det-csv-row">
+          <button class="det-csv" id="detCsvAS" type="button">AS CSV</button>
+          <button class="det-csv" id="detCsvAB" type="button">AB CSV</button>
         </div>
       </div>
-      <button id="goBtn" class="go-btn" type="button">
-        <span id="goBtnText">GO — SHOW DAMAGE HISTORY</span>
-      </button>
-    </section>
 
-    <section class="sec">
-      <h2>Threat types</h2>
-      <div class="g3" id="kinds"></div>
-    </section>
-
-    <section class="sec">
-      <h2>Risk floor</h2>
-      <div class="g4" id="levels"></div>
-    </section>
-
-    <div class="stats">
-      <div class="stat"><b id="sN" class="cyan">0</b><small>Unique storms</small></div>
-      <div class="stat"><b id="sTop" class="amber">–</b><small>Highest risk</small></div>
-      <div class="stat"><b id="sConf" class="green">0</b><small>Ground confirmed</small></div>
-    </div>
-
-    <div id="status">Connecting to threat feeds…</div>
-    <ul id="list"></ul>
-
-    <details class="dx" open>
-      <summary>Data check</summary>
-      <div id="dxb"></div>
-    </details>
-
-    <div class="foot">
-      Aggregated sources: NWS alerts · IEM warnings · IEM ground reports · Aviation Weather METAR · RainViewer radar.
-      Duplicates within 20 km / 45 min merged into one unique storm.
-      <br><button class="linkbtn" id="demoBtn" type="button">LOAD SAMPLE STORM</button>
-      <button class="detect-btn" id="detectBtn" type="button">FIND AFFECTED HOUSES →</button>
+      <div class="foot">
+        DuckDB-Wasm runs the spatial query in your browser — the parcel file is fetched from GitHub and cached
+        for the session. Only the two roof codes <b>AS - ASPHALT</b> and <b>AB - ASBESTOS SHINGLE</b> are matched.
+      </div>
     </div>
   </div>
 </aside>
@@ -484,6 +585,8 @@ whenReady(function init(){
   const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
   const TIGER = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1/query';
   const STORAGE_KEY = 'hailpath_state_v1';
+  const PARCEL_CSV_URL = 'https://raw.githubusercontent.com/x01dev/dbshi/refs/heads/main/shingles_coords.csv';
+  const VALID_ROOFS = ['AS - ASPHALT', 'AB - ASBESTOS SHINGLE', 'AB - ABESTOS SHINGLE'];
 
   const WINDOWS = [
     {k:'7d',  l:'7 DAY',  h:168},
@@ -505,6 +608,7 @@ whenReady(function init(){
     storm:   {l:'STORM',      c:'#8d9bad'}
   };
   const DAMAGE_COLOR = '#ff4d6d';
+  const DET_COLOR = '#ffc857';
 
   const LEVELS = [{v:0,l:'ALL'},{v:1,l:'DAMAGING'},{v:2,l:'HIGH'},{v:3,l:'SEVERE'}];
   const TIER = ['BELOW THRESHOLD','DAMAGING','HIGH RISK','SEVERE'];
@@ -518,12 +622,15 @@ whenReady(function init(){
 
   const state = {
     win:'1d', min:0, customDays:30, lastWin:'1d',
+    tab:'history',
     on:new Set(['hail','wind','tornado','dust','flood']),
     events:[], reports:[], winds:[],
     selected:null, demo:false, loading:false,
     layers:{warn:true, wind:true, reports:true},
     radarHost:'', radarFrames:[], radarIdx:0, radarLayer:null, radarNowIdx:0,
     basemap:'googleRoad',
+    detSelection:new Set(),
+    detResults:null,
     timers:{alerts:null, radar:null, wind:null}
   };
 
@@ -713,7 +820,7 @@ whenReady(function init(){
   }
 
   /* ================================================================ */
-  /* RADAR — LIVE only, hard cap at z5                                */
+  /* RADAR                                                            */
   /* ================================================================ */
   function isLive(){ return state.win === 'live'; }
 
@@ -808,7 +915,7 @@ whenReady(function init(){
   });
 
   /* ================================================================ */
-  /* COUNTY OUTLINES                                                  */
+  /* COUNTY                                                           */
   /* ================================================================ */
   let countiesLayer = null;
   async function loadCountyOutlines(){
@@ -1184,6 +1291,11 @@ whenReady(function init(){
 
   function getShown(){
     const base = state.demo ? [demoEvent()].concat(state.events) : state.events;
+    if (state.tab === 'detector'){
+      return base
+        .filter(e => e.geom && e.geom.type !== 'Point')
+        .sort((x, y) => y.lvl - x.lvl || new Date(y.time) - new Date(x.time));
+    }
     return base
       .filter(e => e.lvl >= state.min && e.kinds.some(k => k === 'storm' || state.on.has(k)))
       .sort((x, y) => y.lvl - x.lvl || new Date(y.time) - new Date(x.time));
@@ -1207,7 +1319,7 @@ whenReady(function init(){
     renderStats(shown);
     renderList(shown);
     renderMap(shown);
-    if (fit) fitToShown(shown);
+    if (fit && state.tab !== 'detector') fitToShown(shown);
   }
 
   function renderStats(shown){
@@ -1290,6 +1402,11 @@ whenReady(function init(){
   function renderMap(shown){
     warnGroup.clearLayers();
     markGroup.clearLayers();
+
+    if (state.tab === 'detector'){
+      renderDetectorMap(shown);
+      return;
+    }
 
     const long = longMode();
     $('legend').style.display = long ? 'none' : 'block';
@@ -1390,6 +1507,58 @@ whenReady(function init(){
     }
   }
 
+  /* -------- DETECTOR MAP (amber storm selection) -------- */
+  function renderDetectorMap(shown){
+    $('legend').style.display = 'none';
+    $('heatLegend').classList.remove('on');
+
+    if (!shown.length){
+      return;
+    }
+
+    shown.forEach(e => {
+      if (!e.geom) return;
+
+      if (e.geom.type === 'Point'){
+        const c = K[e.main].c;
+        const mk = L.circleMarker([e.lat, e.lng], {
+          pane:'warn', radius: 5 + e.lvl, color: c, weight: 1.4, fillColor: c, fillOpacity: 0.28
+        }).addTo(warnGroup);
+        mk.bindTooltip('<b>' + esc(heading(e)) + '</b><br><span style="color:#ff8ea0">Point storm · not selectable</span>', {className:'evt-tip', direction:'top', opacity:1});
+        return;
+      }
+
+      const isSel = state.detSelection.has(e.key);
+      const color = isSel ? DET_COLOR : '#5ee7ff';
+      const weight = isSel ? 3.2 : 1.2;
+      const opacity = isSel ? 1 : 0.55;
+      const fillOpacity = isSel ? 0.22 : 0.035;
+
+      const layer = L.geoJSON(e.geom, {
+        pane: 'warn',
+        style: { color, weight, opacity, fillColor: color, fillOpacity }
+      }).addTo(warnGroup);
+
+      layer.on('click', ev => {
+        L.DomEvent.stopPropagation(ev);
+        toggleStormSelection(e);
+      });
+
+      layer.bindTooltip(
+        '<b>' + esc(heading(e)) + '</b><br>' +
+        (isSel ? '<span style="color:#ffc857">✓ SELECTED — click to deselect</span>' : 'Click to select'),
+        {className: 'evt-tip', direction: 'top', sticky: true, opacity: 1}
+      );
+
+      if (isSel){
+        L.tooltip({permanent:true, direction:'center', className:'evt-label sel-label', interactive:false})
+          .setLatLng([e.lat, e.lng])
+          .setContent('✓ ' + esc(heading(e)))
+          .addTo(markGroup);
+      }
+    });
+  }
+
   function fitToShown(shown){
     const wide = window.innerWidth > 880;
     if (!shown.length || longMode()){
@@ -1437,6 +1606,8 @@ whenReady(function init(){
   }
 
   map.on('click', function(ev){
+    if (state.tab === 'detector') return;
+
     if (longMode()){
       const lat = ev.latlng.lat;
       const lng = ev.latlng.lng;
@@ -1578,7 +1749,226 @@ whenReady(function init(){
   }
 
   /* ================================================================ */
-  /* AUTOCOMPLETE ENGINE                                              */
+  /* DETECTOR LOGIC                                                   */
+  /* ================================================================ */
+  function toggleStormSelection(e){
+    if (!e.geom || e.geom.type === 'Point') return;
+    if (state.detSelection.has(e.key)) state.detSelection.delete(e.key);
+    else state.detSelection.add(e.key);
+    updateDetSelList();
+    renderMap(getShown());
+  }
+
+  function updateDetSelList(){
+    const list = $('detSelList');
+    if (!list) return;
+    const keys = Array.from(state.detSelection);
+    if (keys.length === 0){
+      list.innerHTML = '<div class="empty-small">No storms selected — click a storm on the map</div>';
+      return;
+    }
+    const shown = getShown();
+    const items = keys.map(key => {
+      const e = shown.find(x => x.key === key);
+      if (!e) return '';
+      return '<div class="item">✓ ' + esc(heading(e)) + ' · ' + esc(fmt(e.time)) + '</div>';
+    }).filter(Boolean);
+    list.innerHTML = items.length
+      ? items.join('')
+      : '<div class="empty-small">Selections no longer match current storms — CLEAR and reselect</div>';
+  }
+
+  function detSelectAll(){
+    const shown = getShown();
+    let added = 0;
+    shown.forEach(e => {
+      if (e.geom && e.geom.type !== 'Point'){
+        if (!state.detSelection.has(e.key)) added++;
+        state.detSelection.add(e.key);
+      }
+    });
+    updateDetSelList();
+    renderMap(getShown());
+    $('detStatus').textContent = added > 0
+      ? `Added ${added} storm${added === 1 ? '' : 's'} · ${state.detSelection.size} total selected`
+      : 'All visible storms already selected';
+    $('detStatus').className = 'det-status ok';
+  }
+
+  function detClearAll(){
+    state.detSelection.clear();
+    updateDetSelList();
+    renderMap(getShown());
+    $('detStatus').textContent = 'Selection cleared.';
+    $('detStatus').className = 'det-status';
+  }
+
+  let duckdbModule = null;
+  let duckdbDb = null;
+  let parcelsLoaded = false;
+
+  async function getDuckDb(){
+    if (duckdbDb) return duckdbDb;
+    if (!duckdbModule){
+      duckdbModule = await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/+esm');
+    }
+    const duckdb = duckdbModule;
+    const bundles = duckdb.getJsDelivrBundles();
+    const bundle = await duckdb.selectBundle(bundles);
+    const workerUrl = URL.createObjectURL(
+      new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+    );
+    const worker = new Worker(workerUrl);
+    const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING);
+    const db = new duckdb.AsyncDuckDB(logger, worker);
+    await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+    URL.revokeObjectURL(workerUrl);
+
+    const conn = await db.connect();
+    await conn.query('INSTALL spatial');
+    await conn.query('LOAD spatial');
+    await conn.query('SET geometry_always_xy = true');
+    await conn.close();
+
+    duckdbDb = db;
+    return db;
+  }
+
+  async function runDuckDBQuery(polygons, roofs, minYear, maxResults){
+    const db = await getDuckDb();
+    const conn = await db.connect();
+
+    try {
+      if (!parcelsLoaded){
+        await conn.query(`
+          CREATE OR REPLACE TABLE parcels AS
+          SELECT
+            apn, lat, lon, roof_code, owner, address, city, state, zip,
+            "year" AS year_built, sqft
+          FROM read_csv('${PARCEL_CSV_URL}',
+            header = true,
+            columns = {
+              apn: 'VARCHAR', lat: 'DOUBLE', lon: 'DOUBLE',
+              roof_code: 'VARCHAR', owner: 'VARCHAR', address: 'VARCHAR',
+              city: 'VARCHAR', state: 'VARCHAR', zip: 'VARCHAR',
+              "year": 'INTEGER', sqft: 'INTEGER'
+            }
+          )
+        `);
+        parcelsLoaded = true;
+      }
+
+      const polygonConditions = polygons.map(p => {
+        const geomJson = JSON.stringify(p.geometry).replace(/'/g, "''");
+        return `ST_Contains(ST_GeomFromGeoJSON('${geomJson}'), ST_Point(lon, lat))`;
+      }).join(' OR ');
+
+      const roofList = roofs.map(r => `'${r.replace(/'/g, "''")}'`).join(',');
+
+      const sql = `
+        SELECT
+          apn, lat, lon, roof_code, owner, address, city, state, zip,
+          year_built, sqft
+        FROM parcels
+        WHERE roof_code IN (${roofList})
+          AND (year_built IS NULL OR year_built >= ${Number(minYear)})
+          AND (${polygonConditions})
+        LIMIT ${Number(maxResults)}
+      `;
+
+      const result = await conn.query(sql);
+      return result.toArray().map(row => row.toJSON());
+    } finally {
+      await conn.close();
+    }
+  }
+
+  async function runHouseDetector(){
+    const btn = $('detRunBtn');
+    const status = $('detStatus');
+
+    const keys = Array.from(state.detSelection);
+    if (keys.length === 0){
+      alert('Select at least one storm on the map first.');
+      return;
+    }
+
+    const roofs = [];
+    if ($('detRoofAS').checked) roofs.push('AS - ASPHALT');
+    if ($('detRoofAB').checked) roofs.push('AB - ASBESTOS SHINGLE');
+    if (roofs.length === 0){
+      alert('Select at least one roof type.');
+      return;
+    }
+
+    const minYear = +$('detMinYear').value || 1900;
+    const maxResults = +$('detMaxResults').value || 20000;
+
+    const shown = getShown();
+    const polygons = keys.map(key => {
+      const e = shown.find(x => x.key === key);
+      return e ? { id: key, label: heading(e), geometry: e.geom } : null;
+    }).filter(Boolean);
+
+    if (polygons.length === 0){
+      alert('Selected storms are no longer visible. Reselect on the map.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = parcelsLoaded ? 'SCANNING PARCELS…' : 'LOADING DATA & SCANNING…';
+    status.textContent = parcelsLoaded ? 'Running spatial query…' : 'Fetching parcel file from GitHub…';
+    status.className = 'det-status';
+
+    try {
+      const t0 = performance.now();
+      const parcels = await runDuckDBQuery(polygons, roofs, minYear, maxResults);
+      const t1 = performance.now();
+
+      state.detResults = { parcels };
+      sessionStorage.setItem('hailpath.lastMatches', JSON.stringify({ parcels }));
+
+      $('detStats').style.display = 'grid';
+      $('detTotal').textContent = parcels.length;
+      $('detAS').textContent = parcels.filter(p => p.roof_code === 'AS - ASPHALT').length;
+      $('detAB').textContent = parcels.filter(p => p.roof_code.startsWith('AB -')).length;
+      $('detActions').classList.add('show');
+
+      status.textContent = `✓ ${parcels.length} matching houses across ${polygons.length} storm${polygons.length === 1 ? '' : 's'} · ${(t1 - t0).toFixed(0)}ms`;
+      status.className = 'det-status ok';
+    } catch (err){
+      console.error(err);
+      status.textContent = 'Error: ' + (err.message || String(err));
+      status.className = 'det-status err';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'RUN HOUSE DETECTOR';
+    }
+  }
+
+  function csvEscape(v){
+    return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  }
+
+  function downloadCsv(filename, parcels){
+    const head = 'Owner,Address,City,State,ZIP,APN,Roof,Yr Built,Sq Ft';
+    const rows = parcels.map(p => [
+      p.owner, p.address, p.city, p.state, p.zip,
+      p.apn, p.roof_code, p.year_built, p.sqft
+    ].map(csvEscape).join(','));
+    const csv = [head, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 500);
+  }
+
+  /* ================================================================ */
+  /* AUTOCOMPLETE                                                     */
   /* ================================================================ */
   function setupAutocomplete(config){
     const input = $(config.input);
@@ -1858,7 +2248,7 @@ whenReady(function init(){
     dropAddressMarker(result.lat, result.lng, result.display || result.title);
     map.flyTo([result.lat, result.lng], 15, {duration: 0.9});
 
-    if (longMode()){
+    if (longMode() && state.tab !== 'detector'){
       const hits = getShown().filter(e => {
         if (e.geom && e.geom.type !== 'Point') return inside(result.lng, result.lat, e.geom);
         return haversine(result.lat, result.lng, e.lat, e.lng) < 2;
@@ -1936,11 +2326,34 @@ whenReady(function init(){
       }
     });
 
+    /* ---------- Mode tabs ---------- */
     $('modeHistory').addEventListener('click', () => {
-      if (state.win === 'live' || state.win === 'custom') setWin('1d');
+      state.tab = 'history';
+      if (state.win === 'live' || state.win === 'custom'){
+        setWin('1d');
+      } else {
+        syncControls();
+        renderMap(getShown());
+      }
     });
-    $('modeLive').addEventListener('click', () => setWin('live'));
+    $('modeLive').addEventListener('click', () => {
+      state.tab = 'live';
+      if (state.win !== 'live'){
+        setWin('live');
+      } else {
+        syncControls();
+        renderMap(getShown());
+      }
+    });
+    $('modeDetector').addEventListener('click', () => {
+      state.tab = 'detector';
+      if (state.selected) clearSelection();
+      syncControls();
+      renderMap(getShown());
+      updateDetSelList();
+    });
 
+    /* ---------- Toolbar ---------- */
     $('toolWarn').addEventListener('click', () => { state.layers.warn = !state.layers.warn; syncTools(); saveState(); renderMap(getShown()); });
     $('toolWind').addEventListener('click', () => { state.layers.wind = !state.layers.wind; syncTools(); saveState(); renderMap(getShown()); });
     $('toolReports').addEventListener('click', () => { state.layers.reports = !state.layers.reports; syncTools(); saveState(); renderMap(getShown()); });
@@ -1980,6 +2393,27 @@ whenReady(function init(){
       });
     });
 
+    /* ---------- Detector controls ---------- */
+    $('detSelectAll').addEventListener('click', detSelectAll);
+    $('detClearAll').addEventListener('click', detClearAll);
+    $('detRunBtn').addEventListener('click', runHouseDetector);
+
+    $('detCsvAS').addEventListener('click', () => {
+      if (!state.detResults) return;
+      const rows = state.detResults.parcels.filter(p => p.roof_code === 'AS - ASPHALT');
+      downloadCsv(`hailpath_asphalt_${new Date().toISOString().slice(0,10)}.csv`, rows);
+    });
+    $('detCsvAB').addEventListener('click', () => {
+      if (!state.detResults) return;
+      const rows = state.detResults.parcels.filter(p => p.roof_code.startsWith('AB -'));
+      downloadCsv(`hailpath_asbestos_${new Date().toISOString().slice(0,10)}.csv`, rows);
+    });
+    $('detViewFull').addEventListener('click', () => {
+      if (!state.detResults) return;
+      sessionStorage.setItem('hailpath.lastMatches', JSON.stringify({ parcels: state.detResults.parcels }));
+      window.open('matches.html', '_blank');
+    });
+
     syncControls();
     syncTools();
   }
@@ -1987,6 +2421,8 @@ whenReady(function init(){
   function setWin(k){
     if (k !== 'custom') state.lastWin = k;
     state.win = k;
+    state.detSelection.clear();
+    updateDetSelList();
     syncControls();
     saveState();
     load(true);
@@ -2013,6 +2449,7 @@ whenReady(function init(){
 
     const live = isLive();
     const custom = state.win === 'custom';
+    const tab = state.tab;
 
     const goBtn = $('goBtn');
     goBtn.classList.toggle('on', custom);
@@ -2021,12 +2458,31 @@ whenReady(function init(){
     $('dayValue').textContent = state.customDays + (state.customDays === 1 ? ' DAY' : ' DAYS');
     if (+$('daySlider').value !== state.customDays) $('daySlider').value = state.customDays;
 
-    $('modeHistory').classList.toggle('on', !live);
-    $('modeLive').classList.toggle('on', live);
-    $('livePill').classList.toggle('on', live);
-    $('feedMode').textContent = live ? 'LIVE' : (custom ? 'DAMAGE' : 'HISTORY');
-    $('feedMode').style.color = live ? 'var(--green)' : (custom ? 'var(--red)' : 'var(--cyan)');
+    // Tabs
+    $('modeHistory').classList.toggle('on', tab === 'history');
+    $('modeLive').classList.toggle('on', tab === 'live');
+    $('modeDetector').classList.toggle('on', tab === 'detector');
 
+    // Views
+    $('threatView').style.display = tab === 'detector' ? 'none' : '';
+    $('detectorView').style.display = tab === 'detector' ? '' : 'none';
+
+    // Feed label
+    if (tab === 'detector'){
+      $('feedMode').textContent = 'DETECTOR';
+      $('feedMode').style.color = 'var(--amber)';
+    } else if (live){
+      $('feedMode').textContent = 'LIVE';
+      $('feedMode').style.color = 'var(--green)';
+    } else if (custom){
+      $('feedMode').textContent = 'DAMAGE';
+      $('feedMode').style.color = 'var(--red)';
+    } else {
+      $('feedMode').textContent = 'HISTORY';
+      $('feedMode').style.color = 'var(--cyan)';
+    }
+
+    $('livePill').classList.toggle('on', live);
     syncRadar();
   }
 
@@ -2052,42 +2508,6 @@ whenReady(function init(){
 
   function tick(){ $('clock').textContent = new Date().toLocaleTimeString([], {hour12:false}); }
   setInterval(tick, 1000); tick();
-
-  /* ================================================================ */
-  /* DETECTOR BRIDGE — export storm polygons to the settings page    */
-  /* ================================================================ */
-  function openHouseDetector(){
-    const shown = getShown();
-    const polygons = [];
-    shown.forEach((e, i) => {
-      if (e.geom && e.geom.type !== 'Point'){
-        polygons.push({
-          id: e.key || ('storm-' + i),
-          label: heading(e) + ' · ' + fmt(e.time),
-          geometry: e.geom
-        });
-      }
-    });
-
-    if (polygons.length === 0){
-      alert('No storm polygons on the map right now.\nLoad a HISTORY or LIVE window with active storms first.');
-      return;
-    }
-
-    const win = state.win === 'custom'
-      ? state.customDays + 'D'
-      : ((WINDOWS.find(x => x.k === state.win) || {}).l || '');
-
-    sessionStorage.setItem('hailpath.pendingMatch', JSON.stringify({
-      polygons,
-      timeRange: win + ' window',
-      capturedAt: new Date().toISOString()
-    }));
-
-    window.open('settings.html', '_blank');
-  }
-
-  $('detectBtn').addEventListener('click', openHouseDetector);
 
   /* ================================================================ */
   /* INIT                                                             */
