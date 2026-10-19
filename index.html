@@ -618,9 +618,6 @@ whenReady(function init(){
 
   const RADAR_MAX_ZOOM = 5;
 
-  // Bumped every time load() starts, so stale responses from a superseded
-  // request (e.g. user clicks GO on then off quickly) are discarded instead
-  // of overwriting the fresher window.
   let loadToken = 0;
 
   const state = {
@@ -1157,10 +1154,6 @@ whenReady(function init(){
   }
 
   async function load(fit){
-    // Bump the token up front — any earlier in-flight load() will see a
-    // mismatch when it resolves and discard its (stale) results. This is
-    // what makes rapid GO → GO-off clicks land on the correct window
-    // instead of the previous one.
     const myToken = ++loadToken;
     state.loading = true;
 
@@ -1182,7 +1175,6 @@ whenReady(function init(){
       getJSON(metarUrl, 10000)
     ]);
 
-    // A newer load() superseded this one — drop these results on the floor.
     if (myToken !== loadToken) return;
 
     const raw = [];
@@ -1301,13 +1293,19 @@ whenReady(function init(){
 
   function getShown(){
     const base = state.demo ? [demoEvent()].concat(state.events) : state.events;
+
+    // Apply the SAME time‑window / threat‑type / risk‑floor filters used by
+    // History, then narrow to polygon storms for the Detector. This means
+    // switching to Detector keeps the exact same window and filter set.
+    const filtered = base
+      .filter(e => e.lvl >= state.min && e.kinds.some(k => k === 'storm' || state.on.has(k)));
+
     if (state.tab === 'detector'){
-      return base
+      return filtered
         .filter(e => e.geom && e.geom.type !== 'Point')
         .sort((x, y) => y.lvl - x.lvl || new Date(y.time) - new Date(x.time));
     }
-    return base
-      .filter(e => e.lvl >= state.min && e.kinds.some(k => k === 'storm' || state.on.has(k)))
+    return filtered
       .sort((x, y) => y.lvl - x.lvl || new Date(y.time) - new Date(x.time));
   }
 
@@ -1820,7 +1818,9 @@ whenReady(function init(){
   async function getDuckDb(){
     if (duckdbDb) return duckdbDb;
     if (!duckdbModule){
-      duckdbModule = await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/+esm');
+      // Use the dev build that fixed the home‑directory / extension‑autoload
+      // bug present in 1.28.0. See duckdb-wasm discussion #1818.
+      duckdbModule = await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.1-dev106/+esm');
     }
     const duckdb = duckdbModule;
     const bundles = duckdb.getJsDelivrBundles();
@@ -1836,8 +1836,8 @@ whenReady(function init(){
 
     const conn = await db.connect();
 
-    // FIX: point DuckDB-Wasm at /tmp before INSTALL spatial, otherwise it
-    // fails with "IO Error: Can't find the home directory at '/home/web_user'".
+    // Belt‑and‑suspenders: point at /tmp even though the dev build already
+    // handles the home directory internally.
     await conn.query("SET home_directory = '/tmp';");
 
     await conn.query('INSTALL spatial');
@@ -2334,9 +2334,6 @@ whenReady(function init(){
 
     $('goBtn').addEventListener('click', () => {
       if (state.win === 'custom'){
-        // Turn damage history OFF — fall back to whatever window was active
-        // before GO was pressed. Token-guarded load() will discard the
-        // in-flight custom-window fetch if it's still running.
         const fallback = state.lastWin && state.lastWin !== 'custom' ? state.lastWin : '1d';
         setWin(fallback);
       } else {
