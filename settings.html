@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HailPath — Detector Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050a10;--panel:#08111b;--panel2:#0b1622;
+  --line:rgba(120,200,255,.14);--line2:rgba(120,200,255,.32);
+  --ink:#dceaf5;--mute:#7c93a8;--dim:#546a7d;
+  --cyan:#5ee7ff;--amber:#ffc857;--red:#ff4d6d;--green:#3ddc84;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif;min-height:100vh}
+body{padding:24px 16px 40px}
+.wrap{max-width:960px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:11px;margin-bottom:24px}
+.logo{width:32px;height:32px;border:1px solid rgba(94,231,255,.55);display:grid;place-items:center;color:var(--cyan);font:800 14px "JetBrains Mono",monospace;box-shadow:0 0 14px rgba(94,231,255,.22)}
+.brandtext b{display:block;font:800 13px/1 Manrope;letter-spacing:.2em;text-transform:uppercase}
+.brandtext b em{font-style:normal;color:var(--cyan)}
+.brandtext span{display:block;font:500 8px/1 "JetBrains Mono",monospace;letter-spacing:.22em;color:var(--mute);margin-top:5px}
+
+h1{font:800 22px/1.1 Manrope;letter-spacing:.06em;margin:0 0 6px;text-transform:uppercase}
+h1 em{font-style:normal;color:var(--cyan)}
+.sub{font:500 9px/1 "JetBrains Mono",monospace;letter-spacing:.24em;color:var(--mute);margin-bottom:24px;text-transform:uppercase}
+
+.card{background:linear-gradient(180deg,rgba(8,17,27,.97),rgba(5,10,16,.98));border:1px solid var(--line);border-radius:4px;padding:20px;margin-bottom:14px;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+.card h2{font:600 8px/1 "JetBrains Mono",monospace;letter-spacing:.24em;color:var(--dim);text-transform:uppercase;margin:0 0 14px}
+
+.storm-info{font:500 10px/1.7 "JetBrains Mono",monospace;color:var(--mute);padding:14px;border:1px dashed var(--line);border-radius:3px;margin:0}
+.storm-info b{color:var(--cyan);font-weight:700}
+
+label{display:block;font:500 11px/1.4 Manrope;margin-bottom:16px;color:var(--ink)}
+label:last-child{margin-bottom:0}
+label input[type=number]{
+  display:block;margin-top:8px;background:#0b1622;border:1px solid var(--line);
+  color:var(--ink);font:500 11px/1 "JetBrains Mono",monospace;
+  padding:10px 12px;border-radius:3px;width:100%;max-width:280px;
+}
+label input:focus{outline:none;border-color:rgba(94,231,255,.55);box-shadow:0 0 12px rgba(94,231,255,.15)}
+
+.roof{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:3px;margin-bottom:6px;cursor:pointer;transition:.15s;font:500 11px/1 Manrope}
+.roof:last-child{margin-bottom:0}
+.roof:hover{border-color:var(--line2)}
+.roof input{margin:0;accent-color:var(--cyan);flex:none}
+.roof code{font:700 10px/1 "JetBrains Mono",monospace;color:var(--cyan);letter-spacing:.04em}
+.roof .hint{font:500 9px/1 "JetBrains Mono",monospace;color:var(--dim);margin-left:auto;letter-spacing:.08em}
+
+.run{width:100%;padding:15px 0;background:rgba(94,231,255,.10);border:1px solid rgba(94,231,255,.4);color:var(--cyan);font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.18em;border-radius:3px;cursor:pointer;transition:.15s;margin-top:6px}
+.run:hover:not(:disabled){background:rgba(94,231,255,.20);box-shadow:0 0 20px rgba(94,231,255,.2)}
+.run:disabled{opacity:.5;cursor:wait}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-top:16px;display:none}
+.stats.show{display:grid}
+.stats>div{background:var(--panel);padding:14px 16px}
+.stats b{display:block;font:700 24px/1 "JetBrains Mono",monospace;color:var(--cyan);letter-spacing:-.02em}
+.stats>div:nth-child(2) b{color:var(--cyan)}
+.stats>div:nth-child(3) b{color:var(--amber)}
+.stats small{display:block;font:600 7px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:var(--dim);margin-top:8px;text-transform:uppercase}
+
+.link{display:none;margin-top:20px;font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:var(--cyan);text-decoration:none;border:1px solid rgba(94,231,255,.4);padding:12px 16px;border-radius:3px;text-align:center;transition:.15s}
+.link:hover{background:rgba(94,231,255,.10);box-shadow:0 0 16px rgba(94,231,255,.15)}
+.link.show{display:block}
+
+.note{font:500 9px/1.6 "JetBrains Mono",monospace;color:var(--dim);letter-spacing:.04em;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.note code{color:var(--cyan);font-size:9px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="logo">H</div>
+    <div class="brandtext">
+      <b>HAIL<em>PATH</em></b>
+      <span>AUTO HOUSE DETECTOR</span>
+    </div>
+  </div>
+
+  <h1>Detector <em>Settings</em></h1>
+  <div class="sub">Configure filters and run the scan</div>
+
+  <div class="card">
+    <h2>Storm selection</h2>
+    <p class="storm-info" id="stormInfo">Loading…</p>
+  </div>
+
+  <div class="card">
+    <h2>Roof types (exact match)</h2>
+    <label class="roof">
+      <input type="checkbox" id="roofAS" checked>
+      <code>AS - ASPHALT</code>
+      <span class="hint">Asphalt shingle</span>
+    </label>
+    <label class="roof">
+      <input type="checkbox" id="roofAB" checked>
+      <code>AB - ASBESTOS SHINGLE</code>
+      <span class="hint">Asbestos shingle</span>
+    </label>
+  </div>
+
+  <div class="card">
+    <h2>Filters</h2>
+    <label>Minimum year built
+      <input type="number" id="minYear" min="1800" max="2030" value="1900">
+    </label>
+    <label>Maximum results
+      <input type="number" id="maxResults" min="10" max="100000" value="20000">
+    </label>
+  </div>
+
+  <button class="run" id="runDetectorBtn" type="button">RUN AUTO HOUSE DETECTOR</button>
+
+  <div class="stats" id="stats">
+    <div><b id="stTotal">0</b><small>Total hits</small></div>
+    <div><b id="stAS">0</b><small>AS - ASPHALT</small></div>
+    <div><b id="stAB">0</b><small>AB - ASBESTOS</small></div>
+  </div>
+
+  <a href="matches.html" id="viewLink" class="link">VIEW FULL LIST →</a>
+
+  <div class="note">
+    Roof filter is an exact match on <code>roof_code</code>. First run downloads the CSV once; later runs in the same tab reuse the cached DuckDB session and return in under 1 second.
+  </div>
+</div>
+
+<script type="module">
+import { runDetector } from './js/detector.js';
+
+const runBtn  = document.getElementById('runDetectorBtn');
+const statsEl = document.getElementById('stats');
+const infoEl  = document.getElementById('stormInfo');
+const viewLink = document.getElementById('viewLink');
+
+const pending = JSON.parse(sessionStorage.getItem('hailpath.pendingMatch') || 'null');
+
+if (!pending || !pending.polygons || pending.polygons.length === 0) {
+  infoEl.innerHTML = 'No storm selection found.<br>Open the HailPath map, load a storm window, then click <b>FIND AFFECTED HOUSES</b>.';
+  runBtn.disabled = true;
+} else {
+  const n = pending.polygons.length;
+  const when = pending.timeRange ? ' · ' + pending.timeRange : '';
+  infoEl.innerHTML = `<b>${n}</b> storm polygon${n === 1 ? '' : 's'} selected${when}.<br>Ready to scan.`;
+}
+
+runBtn.addEventListener('click', async () => {
+  const roofTypes = [];
+  if (document.getElementById('roofAS').checked) roofTypes.push('AS - ASPHALT');
+  if (document.getElementById('roofAB').checked) roofTypes.push('AB - ASBESTOS SHINGLE');
+  if (roofTypes.length === 0) return alert('Pick at least one roof type.');
+
+  runBtn.disabled = true;
+  runBtn.textContent = 'LOADING DATA & SCANNING…';
+
+  try {
+    const parcels = await runDetector(pending.polygons, {
+      roofTypes,
+      minYear:    +document.getElementById('minYear').value,
+      maxResults: +document.getElementById('maxResults').value,
+    });
+
+    sessionStorage.setItem('hailpath.lastMatches', JSON.stringify({ parcels }));
+
+    statsEl.classList.add('show');
+    document.getElementById('stTotal').textContent = parcels.length;
+    document.getElementById('stAS').textContent = parcels.filter(p => p.roof_code === 'AS - ASPHALT').length;
+    document.getElementById('stAB').textContent = parcels.filter(p => p.roof_code.startsWith('AB -')).length;
+
+    viewLink.classList.add('show');
+    viewLink.textContent = `VIEW FULL LIST (${parcels.length}) →`;
+  } catch (err) {
+    console.error(err);
+    alert('Detector error: ' + err.message);
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = 'RUN AUTO HOUSE DETECTOR';
+  }
+});
+</script>
+</body>
+</html>
