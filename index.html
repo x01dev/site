@@ -104,11 +104,10 @@ button{font-family:inherit}
 .p-body::-webkit-scrollbar-thumb{background:rgba(94,231,255,.18);border-radius:3px}
 .p-body::-webkit-scrollbar-track{background:transparent}
 
-.mode{display:grid;grid-template-columns:1fr 1fr 1fr;margin:12px 17px 0;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.mode{display:grid;grid-template-columns:1fr 1fr;margin:12px 17px 0;border:1px solid var(--line);border-radius:3px;overflow:hidden}
 .mode button{background:transparent;border:0;color:var(--dim);font:700 9px/1 "JetBrains Mono",monospace;letter-spacing:.16em;padding:12px 0;cursor:pointer;transition:.15s}
 .mode button:hover{color:var(--ink)}
 .mode button.on{color:var(--cyan);background:linear-gradient(180deg,rgba(94,231,255,.16),rgba(94,231,255,.04));box-shadow:inset 0 -2px 0 var(--cyan)}
-.mode button.live.on{color:var(--green);background:linear-gradient(180deg,rgba(61,220,132,.16),rgba(61,220,132,.04));box-shadow:inset 0 -2px 0 var(--green)}
 .mode button.detector.on{color:var(--amber);background:linear-gradient(180deg,rgba(255,200,87,.16),rgba(255,200,87,.04));box-shadow:inset 0 -2px 0 var(--amber)}
 
 .sec{padding:14px 17px 0}
@@ -386,7 +385,6 @@ button{font-family:inherit}
   <div class="p-body">
     <div class="mode" role="group" aria-label="View mode">
       <button id="modeHistory" class="on" type="button">HISTORY</button>
-      <button id="modeLive" class="live" type="button">LIVE</button>
       <button id="modeDetector" class="detector" type="button">DETECTOR</button>
     </div>
 
@@ -619,6 +617,11 @@ whenReady(function init(){
   ];
 
   const RADAR_MAX_ZOOM = 5;
+
+  // Bumped every time load() starts, so stale responses from a superseded
+  // request (e.g. user clicks GO on then off quickly) are discarded instead
+  // of overwriting the fresher window.
+  let loadToken = 0;
 
   const state = {
     win:'1d', min:0, customDays:30, lastWin:'1d',
@@ -1154,7 +1157,11 @@ whenReady(function init(){
   }
 
   async function load(fit){
-    if (state.loading) return;
+    // Bump the token up front — any earlier in-flight load() will see a
+    // mismatch when it resolves and discard its (stale) results. This is
+    // what makes rapid GO → GO-off clicks land on the correct window
+    // instead of the previous one.
+    const myToken = ++loadToken;
     state.loading = true;
 
     const hours = getWindowHours();
@@ -1174,6 +1181,9 @@ whenReady(function init(){
       getJSON(lsrUrl, timeout),
       getJSON(metarUrl, 10000)
     ]);
+
+    // A newer load() superseded this one — drop these results on the floor.
+    if (myToken !== loadToken) return;
 
     const raw = [];
 
@@ -1826,9 +1836,8 @@ whenReady(function init(){
 
     const conn = await db.connect();
 
-    // FIX: tell DuckDB-Wasm where its home directory is before loading extensions.
-    // Without this, INSTALL spatial fails with:
-    //   "IO Error: Can't find the home directory at '/home/web_user'"
+    // FIX: point DuckDB-Wasm at /tmp before INSTALL spatial, otherwise it
+    // fails with "IO Error: Can't find the home directory at '/home/web_user'".
     await conn.query("SET home_directory = '/tmp';");
 
     await conn.query('INSTALL spatial');
@@ -2325,31 +2334,22 @@ whenReady(function init(){
 
     $('goBtn').addEventListener('click', () => {
       if (state.win === 'custom'){
-        setWin(state.lastWin && state.lastWin !== 'custom' ? state.lastWin : '1d');
+        // Turn damage history OFF — fall back to whatever window was active
+        // before GO was pressed. Token-guarded load() will discard the
+        // in-flight custom-window fetch if it's still running.
+        const fallback = state.lastWin && state.lastWin !== 'custom' ? state.lastWin : '1d';
+        setWin(fallback);
       } else {
         state.lastWin = state.win;
         setWin('custom');
       }
     });
 
-    /* ---------- Mode tabs ---------- */
+    /* ---------- Mode tabs (HISTORY / DETECTOR only) ---------- */
     $('modeHistory').addEventListener('click', () => {
       state.tab = 'history';
-      if (state.win === 'live' || state.win === 'custom'){
-        setWin('1d');
-      } else {
-        syncControls();
-        renderMap(getShown());
-      }
-    });
-    $('modeLive').addEventListener('click', () => {
-      state.tab = 'live';
-      if (state.win !== 'live'){
-        setWin('live');
-      } else {
-        syncControls();
-        renderMap(getShown());
-      }
+      syncControls();
+      renderMap(getShown());
     });
     $('modeDetector').addEventListener('click', () => {
       state.tab = 'detector';
@@ -2464,9 +2464,8 @@ whenReady(function init(){
     $('dayValue').textContent = state.customDays + (state.customDays === 1 ? ' DAY' : ' DAYS');
     if (+$('daySlider').value !== state.customDays) $('daySlider').value = state.customDays;
 
-    // Tabs
+    // Tabs — only HISTORY and DETECTOR now
     $('modeHistory').classList.toggle('on', tab === 'history');
-    $('modeLive').classList.toggle('on', tab === 'live');
     $('modeDetector').classList.toggle('on', tab === 'detector');
 
     // Views
