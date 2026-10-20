@@ -206,6 +206,7 @@ button{font-family:inherit}
 .det-status{padding:10px 17px 6px;font:500 8.5px/1.5 "JetBrains Mono",monospace;letter-spacing:.04em;color:var(--mute);min-height:2.4em}
 .det-status.err{color:var(--red)}
 .det-status.ok{color:var(--green)}
+.det-status.warn{color:var(--amber)}
 .det-actions{display:none;flex-direction:column;gap:5px;padding:14px 17px 0}
 .det-actions.show{display:flex}
 .det-actions .det-full-btn{display:block;width:100%;text-align:center;text-decoration:none;padding:11px 0;background:rgba(255,200,87,.08);border:1px solid rgba(255,200,87,.42);color:var(--amber);font:700 9px/1 "JetBrains Mono",monospace;letter-spacing:.18em;border-radius:3px;cursor:pointer;transition:.15s}
@@ -213,6 +214,23 @@ button{font-family:inherit}
 .det-csv-row{display:grid;grid-template-columns:1fr 1fr;gap:5px}
 .det-csv{background:rgba(94,231,255,.06);border:1px solid rgba(94,231,255,.28);color:var(--cyan);font:700 8px/1 "JetBrains Mono",monospace;letter-spacing:.12em;padding:9px 0;border-radius:3px;cursor:pointer;transition:.15s}
 .det-csv:hover{background:rgba(94,231,255,.15);border-color:rgba(94,231,255,.55)}
+
+/* Inline full list */
+.det-full-wrap{display:none;margin:12px 17px 0;border:1px solid rgba(255,200,87,.32);border-radius:3px;max-height:360px;flex-direction:column;overflow:hidden;background:rgba(0,0,0,.25)}
+.det-full-wrap.show{display:flex}
+.det-full-head{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(255,200,87,.06);border-bottom:1px solid rgba(255,200,87,.28);font:700 8px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:var(--amber);text-transform:uppercase}
+.det-full-head button{background:none;border:0;color:var(--mute);cursor:pointer;font:700 14px/1 sans-serif;padding:0;width:20px;height:20px;display:grid;place-items:center;border-radius:2px;transition:.15s}
+.det-full-head button:hover{color:var(--red);background:rgba(255,77,109,.14)}
+.det-full-body{flex:1;overflow-y:auto;font:500 9px/1.55 "JetBrains Mono",monospace;color:var(--ink)}
+.det-full-body::-webkit-scrollbar{width:5px}
+.det-full-body::-webkit-scrollbar-thumb{background:rgba(255,200,87,.25);border-radius:2px}
+.det-fl-row{padding:7px 12px;border-bottom:1px solid rgba(120,200,255,.06);line-height:1.45}
+.det-fl-row:last-child{border-bottom:0}
+.det-fl-row .a{color:var(--ink);font-weight:700;display:block}
+.det-fl-row .b{color:var(--dim);font-size:8.5px;display:block;margin-top:2px}
+.det-fl-row .roof-as{color:var(--cyan);font-weight:700}
+.det-fl-row .roof-ab{color:var(--amber);font-weight:700}
+.det-fl-note{padding:16px 12px;text-align:center;color:var(--mute);font:500 9px/1.5 "JetBrains Mono",monospace}
 
 #maptools{position:absolute;z-index:650;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}
 .tool{width:38px;height:38px;display:grid;place-items:center;background:rgba(8,17,27,.92);border:1px solid var(--line);border-radius:3px;color:var(--dim);cursor:pointer;position:relative;transition:.15s;backdrop-filter:blur(10px)}
@@ -475,7 +493,7 @@ button{font-family:inherit}
       <section class="sec">
         <h2>Filters</h2>
         <div class="det-row"><span>Minimum year built</span><input type="number" id="detMinYear" min="1800" max="2030" value="1900"></div>
-        <div class="det-row"><span>Maximum results</span><input type="number" id="detMaxResults" min="10" max="100000" value="20000"></div>
+        <div class="det-row"><span>Maximum results</span><input type="number" id="detMaxResults" min="10" max="1000000" value="200000"></div>
       </section>
 
       <div style="padding:14px 17px 0">
@@ -496,6 +514,14 @@ button{font-family:inherit}
           <button class="det-csv" id="detCsvAS" type="button">AS CSV</button>
           <button class="det-csv" id="detCsvAB" type="button">AB CSV</button>
         </div>
+      </div>
+
+      <div class="det-full-wrap" id="detFullWrap">
+        <div class="det-full-head">
+          <span id="detFullCount">0 parcels</span>
+          <button id="detFullClose" type="button" aria-label="Close">×</button>
+        </div>
+        <div class="det-full-body" id="detFullBody"></div>
       </div>
 
       <div class="foot">
@@ -633,6 +659,9 @@ whenReady(function init(){
     detResults:null,
     timers:{alerts:null, radar:null, wind:null}
   };
+
+  // Expose for potential cross-tab access from matches.html if the user still opens it
+  window.hailpathDetResults = null;
 
   let currentCounty = {
     name: 'Maricopa County',
@@ -1293,10 +1322,6 @@ whenReady(function init(){
 
   function getShown(){
     const base = state.demo ? [demoEvent()].concat(state.events) : state.events;
-
-    // Apply the SAME time‑window / threat‑type / risk‑floor filters used by
-    // History, then narrow to polygon storms for the Detector. This means
-    // switching to Detector keeps the exact same window and filter set.
     const filtered = base
       .filter(e => e.lvl >= state.min && e.kinds.some(k => k === 'storm' || state.on.has(k)));
 
@@ -1818,8 +1843,6 @@ whenReady(function init(){
   async function getDuckDb(){
     if (duckdbDb) return duckdbDb;
     if (!duckdbModule){
-      // Use the dev build that fixed the home‑directory / extension‑autoload
-      // bug present in 1.28.0. Version must include the ".0" suffix.
       duckdbModule = await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.1-dev106.0/+esm');
     }
     const duckdb = duckdbModule;
@@ -1836,14 +1859,10 @@ whenReady(function init(){
 
     const conn = await db.connect();
 
-    // Point DuckDB at /tmp before INSTALL spatial (belt‑and‑suspenders).
     await conn.query("SET home_directory = '/tmp';");
-
     await conn.query('INSTALL spatial');
     await conn.query('LOAD spatial');
-    // Note: geometry_always_xy is not recognised by the 1.28.1-dev106 build,
-    // so we omit it. ST_Point(lon, lat) and GeoJSON [lon, lat] already give
-    // us the correct (x=lon, y=lat) order for ST_Contains.
+    // geometry_always_xy is not recognised by this build — omitted intentionally.
     await conn.close();
 
     duckdbDb = db;
@@ -1876,7 +1895,9 @@ whenReady(function init(){
 
       const polygonConditions = polygons.map(p => {
         const geomJson = JSON.stringify(p.geometry).replace(/'/g, "''");
-        return `ST_Contains(ST_GeomFromGeoJSON('${geomJson}'), ST_Point(lon, lat))`;
+        // ST_Intersects (not ST_Contains) so points exactly on a storm's boundary
+        // are counted too — otherwise houses on the polygon edge get dropped.
+        return `ST_Intersects(ST_GeomFromGeoJSON('${geomJson}'), ST_Point(lon, lat))`;
       }).join(' OR ');
 
       const roofList = roofs.map(r => `'${r.replace(/'/g, "''")}'`).join(',');
@@ -1899,6 +1920,41 @@ whenReady(function init(){
     }
   }
 
+  function renderFullList(parcels){
+    const wrap = $('detFullWrap');
+    const body = $('detFullBody');
+    const cnt  = $('detFullCount');
+    if (!wrap || !body || !cnt) return;
+
+    cnt.textContent = parcels.length.toLocaleString() + ' parcel' + (parcels.length === 1 ? '' : 's');
+
+    if (!parcels.length){
+      body.innerHTML = '<div class="det-fl-note">No parcels matched.</div>';
+      wrap.classList.add('show');
+      return;
+    }
+
+    // Cap visible rows so the DOM doesn't choke on very large result sets.
+    // The CSV export always includes everything.
+    const CAP = 2000;
+    const visible = parcels.slice(0, CAP);
+    body.innerHTML = visible.map(p => `
+      <div class="det-fl-row">
+        <span class="a">${esc(p.address || '')}${p.city ? ', ' + esc(p.city) : ''}${p.state ? ', ' + esc(p.state) : ''}${p.zip ? ' ' + esc(p.zip) : ''}</span>
+        <span class="b">
+          ${esc(p.owner || '—')} ·
+          <span class="${p.roof_code.startsWith('AS') ? 'roof-as' : 'roof-ab'}">${esc(p.roof_code)}</span>
+          ${p.year_built ? ' · ' + p.year_built : ''}
+          ${p.sqft ? ' · ' + p.sqft + ' sqft' : ''}
+        </span>
+      </div>
+    `).join('') + (parcels.length > CAP
+      ? `<div class="det-fl-note">Showing first ${CAP.toLocaleString()} of ${parcels.length.toLocaleString()} — use CSV export for the full list.</div>`
+      : '');
+
+    wrap.classList.add('show');
+  }
+
   async function runHouseDetector(){
     const btn = $('detRunBtn');
     const status = $('detStatus');
@@ -1918,7 +1974,7 @@ whenReady(function init(){
     }
 
     const minYear = +$('detMinYear').value || 1900;
-    const maxResults = +$('detMaxResults').value || 20000;
+    const maxResults = +$('detMaxResults').value || 200000;
 
     const shown = getShown();
     const polygons = keys.map(key => {
@@ -1936,13 +1992,31 @@ whenReady(function init(){
     status.textContent = parcelsLoaded ? 'Running spatial query…' : 'Fetching parcel file from GitHub…';
     status.className = 'det-status';
 
+    // Hide any previous full list while we re-run
+    $('detFullWrap').classList.remove('show');
+
     try {
       const t0 = performance.now();
       const parcels = await runDuckDBQuery(polygons, roofs, minYear, maxResults);
       const t1 = performance.now();
 
       state.detResults = { parcels };
-      sessionStorage.setItem('hailpath.lastMatches', JSON.stringify({ parcels }));
+      window.hailpathDetResults = { parcels };
+
+      // Best-effort persistence for matches.html. Never let a storage quota
+      // failure crash the run — the inline list and CSV export don't need it.
+      try {
+        if (parcels.length <= 20000){
+          sessionStorage.setItem('hailpath.lastMatches', JSON.stringify({ parcels }));
+        } else {
+          sessionStorage.setItem('hailpath.lastMatches', JSON.stringify({
+            count: parcels.length,
+            tooLarge: true
+          }));
+        }
+      } catch (e){
+        try { sessionStorage.removeItem('hailpath.lastMatches'); } catch(e2){}
+      }
 
       $('detStats').style.display = 'grid';
       $('detTotal').textContent = parcels.length;
@@ -1950,8 +2024,11 @@ whenReady(function init(){
       $('detAB').textContent = parcels.filter(p => p.roof_code.startsWith('AB -')).length;
       $('detActions').classList.add('show');
 
-      status.textContent = `✓ ${parcels.length} matching houses across ${polygons.length} storm${polygons.length === 1 ? '' : 's'} · ${(t1 - t0).toFixed(0)}ms`;
-      status.className = 'det-status ok';
+      const cap = maxResults > 0 && parcels.length >= maxResults;
+      status.textContent = cap
+        ? `⚠ ${parcels.length.toLocaleString()} matches (hit cap of ${maxResults.toLocaleString()}) · ${(t1 - t0).toFixed(0)}ms — raise Max results to see more`
+        : `✓ ${parcels.length.toLocaleString()} matching houses across ${polygons.length} storm${polygons.length === 1 ? '' : 's'} · ${(t1 - t0).toFixed(0)}ms`;
+      status.className = 'det-status ' + (cap ? 'warn' : 'ok');
     } catch (err){
       console.error(err);
       status.textContent = 'Error: ' + (err.message || String(err));
@@ -2343,7 +2420,7 @@ whenReady(function init(){
       }
     });
 
-    /* ---------- Mode tabs (HISTORY / DETECTOR only) ---------- */
+    /* ---------- Mode tabs ---------- */
     $('modeHistory').addEventListener('click', () => {
       state.tab = 'history';
       syncControls();
@@ -2412,10 +2489,14 @@ whenReady(function init(){
       const rows = state.detResults.parcels.filter(p => p.roof_code.startsWith('AB -'));
       downloadCsv(`hailpath_asbestos_${new Date().toISOString().slice(0,10)}.csv`, rows);
     });
+
+    // Inline full list — no new tab, no sessionStorage quota issues.
     $('detViewFull').addEventListener('click', () => {
       if (!state.detResults) return;
-      sessionStorage.setItem('hailpath.lastMatches', JSON.stringify({ parcels: state.detResults.parcels }));
-      window.open('matches.html', '_blank');
+      renderFullList(state.detResults.parcels);
+    });
+    $('detFullClose').addEventListener('click', () => {
+      $('detFullWrap').classList.remove('show');
     });
 
     syncControls();
@@ -2462,15 +2543,12 @@ whenReady(function init(){
     $('dayValue').textContent = state.customDays + (state.customDays === 1 ? ' DAY' : ' DAYS');
     if (+$('daySlider').value !== state.customDays) $('daySlider').value = state.customDays;
 
-    // Tabs — only HISTORY and DETECTOR now
     $('modeHistory').classList.toggle('on', tab === 'history');
     $('modeDetector').classList.toggle('on', tab === 'detector');
 
-    // Views
     $('threatView').style.display = tab === 'detector' ? 'none' : '';
     $('detectorView').style.display = tab === 'detector' ? '' : 'none';
 
-    // Feed label
     if (tab === 'detector'){
       $('feedMode').textContent = 'DETECTOR';
       $('feedMode').style.color = 'var(--amber)';
