@@ -368,8 +368,12 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .brandtext span { display: none; }
 }
 
-/* Large phones / tablets portrait — panel becomes bottom sheet */
+/* Large phones / tablets portrait — panel becomes bottom sheet, on top of everything */
 @media (max-width: 880px) {
+  /* Panel is always on top of all floating UI on mobile */
+  #panel { z-index: 1000; }
+  #panelReopen { z-index: 999; }
+
   #topbar {
     top: calc(10px + var(--safe-t));
     left: calc(10px + var(--safe-l));
@@ -397,7 +401,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
     height: 65vh;
     max-height: calc(100vh - 100px - var(--safe-t) - var(--safe-b));
     border-radius: 14px;
-    box-shadow: 0 -8px 40px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.4);
+    box-shadow: 0 -8px 40px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.4), 0 0 40px rgba(94,231,255,.08);
   }
   #panel.closed { transform: translateY(115%); }
 
@@ -475,7 +479,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .det-fl-row { padding: 10px 12px; font-size: 10px; }
   .det-fl-row .b { font-size: 9px; margin-top: 3px; }
 
-  /* Map tools — placed at top-right, below search boxes */
+  /* Map tools — placed at top-right, below search boxes; now BELOW panel in z-order */
   #maptools {
     right: calc(10px + var(--safe-r));
     top: calc(180px + var(--safe-t));
@@ -483,6 +487,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
     transform: none;
     flex-direction: row;
     gap: 6px;
+    z-index: 650; /* stays below panel (1000) */
   }
   .tool {
     width: 44px;
@@ -494,31 +499,32 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .tool svg { width: 20px; height: 20px; }
   .tool::after { display: none; }
 
-  /* Basemap hidden on mobile — space is at a premium */
+  /* Basemap hidden on mobile */
   #basemapPicker { display: none; }
 
-  /* Hide non-essential floating widgets on mobile */
   #timeline { display: none !important; }
   #legend, #heatLegend { display: none !important; }
   #clock { display: none; }
   #livePill { padding: 8px 10px; font-size: 8px; }
 
-  /* Detail panel — floats above search tools, below top bar */
+  /* Detail panel — sits above the panel physically so no z-index fight */
   #detail {
     left: calc(10px + var(--safe-l));
     right: calc(10px + var(--safe-r));
     top: auto;
     bottom: calc(calc(65vh + 20px) + var(--safe-b));
     width: auto;
-    max-height: calc(100vh - 240px - var(--safe-t) - var(--safe-b));
+    max-height: calc(35vh - 60px);
     border-radius: 12px;
     padding: 14px;
     overflow-y: auto;
+    z-index: 660; /* below panel (1000), but positioned above it so no overlap */
+    box-shadow: 0 12px 40px rgba(0,0,0,.6);
   }
   .det-title { font-size: 16px; }
   .det-cell { padding: 10px 10px; }
   .det-cell b { font-size: 15px; }
-  .agg-list { max-height: 40vh; }
+  .agg-list { max-height: 30vh; }
 }
 
 /* Phones — additional refinements */
@@ -587,22 +593,23 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   #panelReopen { width: 58px; height: 58px; }
   #panelReopen svg { width: 22px; height: 22px; }
 
-  /* Detail becomes an overlay modal on small phones */
+  /* Detail stays as a floating card above the panel — never a full-screen modal.
+     This keeps the panel visible at all times on mobile. */
   #detail {
-    position: fixed;
     left: calc(8px + var(--safe-l));
     right: calc(8px + var(--safe-r));
-    top: calc(150px + var(--safe-t));
-    bottom: calc(8px + var(--safe-b));
-    max-height: none;
-    z-index: 950;
+    top: calc(110px + var(--safe-t));
+    bottom: auto;
+    max-height: calc(38vh - 120px);
     border-radius: 12px;
-    padding: 14px;
-    box-shadow: 0 0 0 200vmax rgba(0,0,0,.72), 0 24px 60px rgba(0,0,0,.8);
+    padding: 12px;
+    overflow-y: auto;
+    z-index: 660;
+    box-shadow: 0 12px 40px rgba(0,0,0,.6);
   }
   .det-title { font-size: 15px; }
   .det-close { width: 32px; height: 32px; font-size: 16px; }
-  .agg-list { max-height: 45vh; }
+  .agg-list { max-height: 25vh; }
 }
 
 /* Very small phones */
@@ -632,11 +639,17 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .det-full-head span { font-size: 8px; }
   .det-fl-row { font-size: 9px; }
 
-  #detail { top: calc(140px + var(--safe-t)); }
+  #detail {
+    top: calc(100px + var(--safe-t));
+    max-height: calc(40vh - 110px);
+  }
 }
 
-/* Landscape phones / short viewports — panel becomes a left-side drawer */
+/* Landscape phones / short viewports — panel becomes a left-side drawer, always on top */
 @media (max-height: 520px) and (orientation: landscape) {
+  #panel { z-index: 1000; }
+  #panelReopen { z-index: 999; }
+
   #topbar {
     top: calc(8px + var(--safe-t));
     left: calc(10px + var(--safe-l));
@@ -816,7 +829,6 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
       <button id="modeDetector" class="detector" type="button">DETECTOR</button>
     </div>
 
-    <!-- ============================ THREAT VIEW ============================ -->
     <div id="threatView">
       <section class="sec">
         <h2>Time window</h2>
@@ -869,7 +881,6 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
       </div>
     </div>
 
-    <!-- ========================== DETECTOR VIEW ========================== -->
     <div id="detectorView" style="display:none">
       <section class="sec">
         <h2>Select storms</h2>
@@ -1949,7 +1960,6 @@ whenReady(function init(){
     }
   }
 
-  /* -------- DETECTOR MAP -------- */
   function renderDetectorMap(shown){
     $('legend').style.display = 'none';
     $('heatLegend').classList.remove('on');
@@ -2984,9 +2994,6 @@ whenReady(function init(){
   function tick(){ $('clock').textContent = new Date().toLocaleTimeString([], {hour12:false}); }
   setInterval(tick, 1000); tick();
 
-  /* ================================================================ */
-  /* INIT                                                             */
-  /* ================================================================ */
   loadState();
   applyBasemap(state.basemap);
   buildControls();
