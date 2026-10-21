@@ -334,7 +334,6 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 .rpt i::after{content:"";position:absolute;inset:-5px;border:1px solid var(--c);border-radius:50%;animation:ping 2.4s infinite}
 @keyframes ping{0%{transform:scale(.45);opacity:.9}80%,100%{transform:scale(1.65);opacity:0}}
 
-/* Map Hover Info Tooltip */
 .map-hover-info {
   position: absolute;
   z-index: 1000;
@@ -360,9 +359,6 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 .map-hover-info .hi-val.hail { color: var(--amber); }
 .map-hover-info .hi-val.wind { color: var(--cyan); }
 
-/* ============================================================ */
-/* RESPONSIVE / MOBILE COMPATIBILITY                            */
-/* ============================================================ */
 @media (min-width: 1900px) {
   #topbar { top: calc(18px + var(--safe-t)); left: calc(20px + var(--safe-l)); right: calc(20px + var(--safe-r)); }
   #panel { width: 500px; top: 96px; }
@@ -899,9 +895,6 @@ whenReady(function init(){
   const MRMS_WMS_URL = 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/mrms.cgi';
   const GOES_GIBS_URL = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/{time}/500m/{z}/{y}/{x}.png';
 
-  // Hail intensity bands — each band is produced by inward-buffering the storm
-  // footprint by an ABSOLUTE kilometer distance, then capping that distance at
-  // 60% of the polygon's narrow half-width so it can never split the shape.
   const HAIL_ZONES = [
     { min: 0.50, insetKm: 0,  fill: 'rgba(255,210,122,0.16)', stroke: 'rgba(255,210,122,0.85)', weight: 1.0, label: '0.50" outer' },
     { min: 0.50, insetKm: 3,  fill: 'rgba(255,184,64,0.28)',  stroke: 'rgba(255,184,64,0.95)',  weight: 1.2, label: '0.50" core'  },
@@ -1112,12 +1105,7 @@ whenReady(function init(){
       esc(text.slice(idx + query.length));
   }
 
-  // Normalise any Feature/Geometry input to a bare Geometry.
   const asGeom = x => (x && x.type === 'Feature') ? x.geometry : x;
-
-  /* ================================================================ */
-  /* STORM FOOTPRINT GEOMETRY & SMOOTHING                             */
-  /* ================================================================ */
 
   function chaikinSmooth(ringIn, iterations){
     let r = ringIn.slice();
@@ -1159,8 +1147,6 @@ whenReady(function init(){
     return geom;
   }
 
-  // Morphological Close: grow slightly then shrink back. Fills narrow gaps
-  // and rounds corners without splitting. Returns a bare Geometry.
   function cloudifyGeometry(geom){
     if (!window.turf || !turf.buffer) return geom;
     try {
@@ -1174,8 +1160,6 @@ whenReady(function init(){
     }
   }
 
-  // Narrow half-width of the polygon, in km. Used to cap the inset distance
-  // so the buffer never erodes the polygon down to zero or splits it.
   function localHalfWidthKm(g){
     try {
       const b = geomBounds(g);
@@ -1197,13 +1181,6 @@ whenReady(function init(){
     } catch(e){ return null; }
   }
 
-  /* ================================================================ */
-  /* STORM SYSTEM CLUSTERING                                          */
-  /* Merge overlapping / nearby warning polygons issued within a short */
-  /* time window into a single storm system whose geometry is the      */
-  /* union of its members. Two overlaps are checked: direct geometric  */
-  /* intersection (always merge) and near-contact within BRIDGE_KM.    */
-  /* ================================================================ */
   function clusterAndMerge(events){
     const poly = events.filter(e => e.geom && e.geom.type !== 'Point');
     const pts  = events.filter(e => !e.geom || e.geom.type === 'Point');
@@ -1214,8 +1191,8 @@ whenReady(function init(){
     const find = i => { while(parent[i]!==i){ parent[i]=parent[parent[i]]; i=parent[i]; } return i; };
     const union = (a,b) => { a=find(a); b=find(b); if(a!==b) parent[b]=a; };
 
-    const BRIDGE_KM = 6;   // merge when polygons come within ~6 km
-    const MAX_HRS   = 12;  // was 6 — slow squall lines were being split
+    const BRIDGE_KM = 6;
+    const MAX_HRS   = 12;
 
     const bufs = poly.map(e => {
       try { return asGeom(turf.buffer(e.geom, BRIDGE_KM, {units:'kilometers', steps:24})); }
@@ -1226,9 +1203,7 @@ whenReady(function init(){
       for (let j=i+1; j<n; j++){
         if (Math.abs(poly[i].time - poly[j].time) / 3600e3 > MAX_HRS) continue;
         try {
-          // Direct overlap / boundary-sharing → always merge
           if (turf.booleanIntersects(poly[i].geom, poly[j].geom)){ union(i, j); continue; }
-          // Near-overlap within BRIDGE_KM → also one system
           if (turf.booleanIntersects(bufs[i], poly[j].geom) ||
               turf.booleanIntersects(bufs[j], poly[i].geom)){ union(i, j); }
         } catch(e){}
@@ -1250,9 +1225,6 @@ whenReady(function init(){
       for (let k=1; k<members.length; k++){
         try { geom = asGeom(turf.union(geom, members[k].geom)) || geom; } catch(e){}
       }
-      // Morphological close across the whole cluster. Radius matches
-      // BRIDGE_KM so that any two polygons that qualified as one system
-      // are also connected visually in the final shape.
       try {
         const b = asGeom(turf.buffer(geom, 6, {units:'kilometers', steps:32}));
         const s = asGeom(turf.buffer(b, -6, {units:'kilometers', steps:32}));
@@ -1284,9 +1256,6 @@ whenReady(function init(){
     return out.concat(pts);
   }
 
-  /* ================================================================ */
-  /* MAP                                                              */
-  /* ================================================================ */
   const map = L.map('map', {zoomControl:false, attributionControl:false, preferCanvas:true, maxZoom:21}).setView([33.3,-112.1], 8);
   L.control.zoom({position:'bottomright'}).addTo(map);
   L.control.scale({position:'bottomleft', imperial:true, metric:false}).addTo(map);
@@ -1327,9 +1296,6 @@ whenReady(function init(){
     baseFailoverTimeout = setTimeout(() => finish(true), 15000);
   }
 
-  /* ================================================================ */
-  /* HOVER ENGINE                                                     */
-  /* ================================================================ */
   const hoverEl = $('hoverInfo');
 
   map.on('mousemove', function(ev) {
@@ -1380,9 +1346,6 @@ whenReady(function init(){
     hoverEl.classList.remove('on');
   });
 
-  /* ================================================================ */
-  /* RADAR                                                            */
-  /* ================================================================ */
   function isLive(){ return state.win === 'live'; }
 
   function radarShouldRender(){
@@ -1475,9 +1438,6 @@ whenReady(function init(){
     drawRadarFrame();
   });
 
-  /* ================================================================ */
-  /* MRMS MESH + SATELLITE OVERLAY TOGGLES                           */
-  /* ================================================================ */
   function toggleMRMS(){
     state.layers.mrms = !state.layers.mrms;
     if (state.layers.mrms){
@@ -1527,9 +1487,6 @@ whenReady(function init(){
     saveState();
   }
 
-  /* ================================================================ */
-  /* COUNTY                                                           */
-  /* ================================================================ */
   let countiesLayer = null;
   async function loadCountyOutlines(){
     try {
@@ -1716,9 +1673,6 @@ whenReady(function init(){
           if (!matched.geom || matched.geom.type === 'Point'){
             matched.geom = e.geom;
           } else {
-            // BOTH events carry polygons — union them. Picking one silently
-            // truncated the storm to whichever warning arrived first, which
-            // is what produced the "overlapping when they should be one" shape.
             try {
               const u = asGeom(turf.union(matched.geom, e.geom));
               if (u) matched.geom = u;
@@ -1900,12 +1854,6 @@ whenReady(function init(){
     setSource('awc', m.status === 'fulfilled', m.status === 'fulfilled' ? ((m.value || []).length + ' METARs') : 'unreachable');
 
     const merged = deduplicate(raw, 20, 45);
-
-    // Cluster overlapping / nearby polygons into whole storm systems.
-    // deduplicate() already unions polygons that share a centroid, but
-    // warning updates typically have shifted centroids and don't match.
-    // This second pass unions any polygons that intersect or come within
-    // BRIDGE_KM of each other, so an evolving storm shows as one shape.
     const clustered = clusterAndMerge(merged);
     state.events = clustered.filter(eventInCounty);
 
@@ -2040,11 +1988,6 @@ whenReady(function init(){
     return L.divIcon({html, className:'wa', iconSize:[84, size + 20], iconAnchor:[42, (size + 20) / 2]});
   }
 
-  /* ================================================================ */
-  /* HAIL SWATH RENDERING — capped geodesic inward buffer             */
-  /* The inset distance is measured in absolute km, then clamped by   */
-  /* the polygon's narrow half-width so it can never split the shape. */
-  /* ================================================================ */
   function renderHailSwath(e){
     const hail = e.hail || 0;
     if (!e.geom || e.geom.type === 'Point') return;
@@ -2053,7 +1996,6 @@ whenReady(function init(){
     const smoothed = smoothGeometry(cloudified, 3);
     const halfWidthKm = localHalfWidthKm(smoothed);
 
-    // Transparent click-catcher (original geometry, so edge clicks land)
     const catcher = L.geoJSON(e.geom, {
       pane: 'warn',
       style: {
@@ -2078,8 +2020,6 @@ whenReady(function init(){
     HAIL_ZONES.forEach(z => {
       if (hail < z.min) return;
 
-      // Cap the inset by 60% of half-width so a squall line can never
-      // erode more than that and split into two lobes.
       const km = Math.min(z.insetKm, halfWidthKm * 0.6);
       const zoneGeom = km <= 0.1 ? smoothed : insetByKm(smoothed, km);
       if (!zoneGeom) return;
@@ -2473,9 +2413,6 @@ whenReady(function init(){
     if (state.layers.wind) renderMap(getShown());
   }
 
-  /* ================================================================ */
-  /* DETECTOR LOGIC                                                   */
-  /* ================================================================ */
   function toggleStormSelection(e){
     if (!e.geom || e.geom.type === 'Point') return;
     if (state.detSelection.has(e.key)) state.detSelection.delete(e.key);
@@ -2743,9 +2680,6 @@ whenReady(function init(){
     setTimeout(() => URL.revokeObjectURL(a.href), 500);
   }
 
-  /* ================================================================ */
-  /* AUTOCOMPLETE                                                     */
-  /* ================================================================ */
   function setupAutocomplete(config){
     const input = $(config.input);
     const box = $(config.box);
@@ -2880,9 +2814,6 @@ whenReady(function init(){
     return { runSearch, hideList };
   }
 
-  /* ================================================================ */
-  /* COUNTY SEARCH                                                    */
-  /* ================================================================ */
   const COUNTY_FALLBACKS = [
     'Maricopa','Pima','Pinal','Yavapai','Yuma','Mohave','Coconino','Cochise','Navajo','Apache',
     'La Paz','Gila','Santa Cruz','Graham','Greenlee',
@@ -2970,9 +2901,6 @@ whenReady(function init(){
     }
   }
 
-  /* ================================================================ */
-  /* ADDRESS SEARCH                                                   */
-  /* ================================================================ */
   async function fetchAddressSuggestions(q, signal){
     const b = currentCounty.bounds;
     const viewbox = [b.getWest().toFixed(4), b.getNorth().toFixed(4), b.getEast().toFixed(4), b.getSouth().toFixed(4)].join(',');
@@ -3050,9 +2978,6 @@ whenReady(function init(){
     }
   }
 
-  /* ================================================================ */
-  /* CONTROLS                                                         */
-  /* ================================================================ */
   function buildControls(){
     const mk = (host, txt, cls, fn) => {
       const b = document.createElement('button');
