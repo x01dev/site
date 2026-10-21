@@ -899,13 +899,14 @@ whenReady(function init(){
   const MRMS_WMS_URL = 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/mrms.cgi';
   const GOES_GIBS_URL = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/{time}/500m/{z}/{y}/{x}.png';
 
-  // Hail intensity bands. Each band is created by geodesic inward-buffering
-  // the (smoothed) storm footprint by `insetFraction` × storm radius.
+  // Hail intensity bands — each band is produced by inward-buffering the storm
+  // footprint by an ABSOLUTE kilometer distance, then capping that distance at
+  // 60% of the polygon's narrow half-width so it can never split the shape.
   const HAIL_ZONES = [
-    { min: 0.50, insetFraction: 0.00, fill: 'rgba(255,210,122,0.16)', stroke: 'rgba(255,210,122,0.85)', weight: 1.0, label: '0.50" outer' },
-    { min: 0.50, insetFraction: 0.20, fill: 'rgba(255,184,64,0.28)',  stroke: 'rgba(255,184,64,0.95)',  weight: 1.2, label: '0.50" core'  },
-    { min: 0.75, insetFraction: 0.38, fill: 'rgba(255,140,42,0.40)',  stroke: 'rgba(255,140,42,1)',     weight: 1.4, label: '0.75" core'  },
-    { min: 1.00, insetFraction: 0.55, fill: 'rgba(255,77,109,0.55)',  stroke: 'rgba(255,77,109,1)',     weight: 1.7, label: '1.00"+ core' }
+    { min: 0.50, insetKm: 0,  fill: 'rgba(255,210,122,0.16)', stroke: 'rgba(255,210,122,0.85)', weight: 1.0, label: '0.50" outer' },
+    { min: 0.50, insetKm: 3,  fill: 'rgba(255,184,64,0.28)',  stroke: 'rgba(255,184,64,0.95)',  weight: 1.2, label: '0.50" core'  },
+    { min: 0.75, insetKm: 6,  fill: 'rgba(255,140,42,0.40)',  stroke: 'rgba(255,140,42,1)',     weight: 1.4, label: '0.75" core'  },
+    { min: 1.00, insetKm: 10, fill: 'rgba(255,77,109,0.55)',  stroke: 'rgba(255,77,109,1)',     weight: 1.7, label: '1.00"+ core' }
   ];
 
   const WINDOWS = [
@@ -1093,6 +1094,13 @@ whenReady(function init(){
     return lat >= currentCounty.bounds.getSouth() && lat <= currentCounty.bounds.getNorth()
         && lng >= currentCounty.bounds.getWest() && lng <= currentCounty.bounds.getEast();
   }
+  function eventInCounty(e){
+    if (!currentCounty.geometry) return pointInCounty(e.lat, e.lng);
+    if (e.geom && e.geom.type !== 'Point'){
+      try { return turf.booleanIntersects(e.geom, currentCounty.geometry); } catch(err){}
+    }
+    return pointInCounty(e.lat, e.lng);
+  }
 
   function highlightMatch(text, query){
     if (!text) return '';
@@ -1104,11 +1112,13 @@ whenReady(function init(){
       esc(text.slice(idx + query.length));
   }
 
+  // Normalise any Feature/Geometry input to a bare Geometry.
+  const asGeom = x => (x && x.type === 'Feature') ? x.geometry : x;
+
   /* ================================================================ */
   /* STORM FOOTPRINT GEOMETRY & SMOOTHING                             */
   /* ================================================================ */
 
-  // Chaikin corner-cutting for organic smoothing of the polygon border.
   function chaikinSmooth(ringIn, iterations){
     let r = ringIn.slice();
     if (r.length > 1 && r[0][0] === r[r.length-1][0] && r[0][1] === r[r.length-1][1]) {
@@ -1135,65 +1145,139 @@ whenReady(function init(){
     if (geom.type === 'Polygon'){
       return {
         type: 'Polygon',
-        coordinates: geom.coordinates.map((ring, idx) => idx === 0 ? chaikinSmooth(ring, iterations) : ring)
+        coordinates: geom.coordinates.map((r, idx) => idx === 0 ? chaikinSmooth(r, iterations) : r)
       };
     }
     if (geom.type === 'MultiPolygon'){
       return {
         type: 'MultiPolygon',
         coordinates: geom.coordinates.map(poly =>
-          poly.map((ring, idx) => idx === 0 ? chaikinSmooth(ring, iterations) : ring)
+          poly.map((r, idx) => idx === 0 ? chaikinSmooth(r, iterations) : r)
         )
       };
     }
     return geom;
   }
 
-  // Compute the storm's effective radius in km from its polygon area.
-  function stormRadiusKm(geom){
-    try {
-      if (!window.turf || !turf.area) return 10;
-      const m2 = turf.area(geom);
-      return Math.sqrt(m2 / Math.PI) / 1000;
-    } catch(e){
-      return 10;
-    }
-  }
-
-  // The KEY fix: inward-offset (erode) the polygon geodesically so the
-  // resulting band traces the storm's actual contour. Unlike scaling
-  // toward the centroid, this respects elongation, concavity, and
-  // irregular shapes. Uses turf.buffer with a negative distance.
-  function insetGeometry(geom, fraction, radiusKm){
-    if (fraction <= 0) return geom;
-    if (!window.turf || !turf.buffer) return null;
-    const distKm = radiusKm * fraction;
-    if (distKm <= 0) return geom;
-    try {
-      const inset = turf.buffer(geom, -distKm, {units:'kilometers', steps:64});
-      if (!inset) return null;
-      // Reject degenerate slivers
-      const areaM2 = turf.area(inset);
-      if (!areaM2 || areaM2 < 100) return null;
-      return inset;
-    } catch(e){
-      return null;
-    }
-  }
-
-  // Morphological Close: grow slightly then shrink back. This fills in
-  // small gaps and rounds sharp corners, giving a "cloud" appearance.
+  // Morphological Close: grow slightly then shrink back. Fills narrow gaps
+  // and rounds corners without splitting. Returns a bare Geometry.
   function cloudifyGeometry(geom){
     if (!window.turf || !turf.buffer) return geom;
     try {
-      const grown = turf.buffer(geom, 1.5, {units:'kilometers', steps:64});
+      const grown = asGeom(turf.buffer(geom, 1.5, {units:'kilometers', steps:64}));
       if (!grown) return geom;
-      const shrunk = turf.buffer(grown, -1.5, {units:'kilometers', steps:64});
+      const shrunk = asGeom(turf.buffer(grown, -1.5, {units:'kilometers', steps:64}));
       if (!shrunk) return geom;
       return shrunk;
     } catch(e) {
       return geom;
     }
+  }
+
+  // Narrow half-width of the polygon, in km. Used to cap the inset distance
+  // so the buffer never erodes the polygon down to zero or splits it.
+  function localHalfWidthKm(g){
+    try {
+      const b = geomBounds(g);
+      const dNS = Math.abs(b.n - b.s) * 111;
+      const dEW = Math.abs(b.e - b.w) * 111 * Math.cos(((b.n + b.s) / 2) * Math.PI / 180);
+      const w = Math.min(dNS, dEW) / 2;
+      return w > 0 ? w : 5;
+    } catch(e){ return 5; }
+  }
+
+  function insetByKm(g, km){
+    if (km <= 0.1) return g;
+    if (!window.turf || !turf.buffer) return null;
+    try {
+      const b = asGeom(turf.buffer(g, -km, {units:'kilometers', steps:64}));
+      if (!b) return null;
+      if ((turf.area(b) || 0) < 100) return null;
+      return b;
+    } catch(e){ return null; }
+  }
+
+  /* ================================================================ */
+  /* STORM SYSTEM CLUSTERING                                          */
+  /* Merge overlapping / nearby warning polygons issued within a short */
+  /* time window into a single storm system whose geometry is the      */
+  /* union of its members. This is what makes a squall line look like  */
+  /* one continuous swath instead of 4-5 disconnected polygons.        */
+  /* ================================================================ */
+  function clusterAndMerge(events){
+    const poly = events.filter(e => e.geom && e.geom.type !== 'Point');
+    const pts  = events.filter(e => !e.geom || e.geom.type === 'Point');
+    const n = poly.length;
+    if (n < 2) return events;
+
+    const parent = Array.from({length:n}, (_,i)=>i);
+    const find = i => { while(parent[i]!==i){ parent[i]=parent[parent[i]]; i=parent[i]; } return i; };
+    const union = (a,b) => { a=find(a); b=find(b); if(a!==b) parent[b]=a; };
+
+    const BRIDGE_KM = 6;   // merge when polygons come within ~6 km
+    const MAX_HRS   = 6;   // same storm-system time window
+
+    const bufs = poly.map(e => {
+      try { return asGeom(turf.buffer(e.geom, BRIDGE_KM, {units:'kilometers', steps:24})); }
+      catch(err){ return e.geom; }
+    });
+
+    for (let i=0; i<n; i++){
+      for (let j=i+1; j<n; j++){
+        if (Math.abs(poly[i].time - poly[j].time) / 3600e3 > MAX_HRS) continue;
+        try {
+          if (turf.booleanIntersects(bufs[i], poly[j].geom) ||
+              turf.booleanIntersects(bufs[j], poly[i].geom)) union(i, j);
+        } catch(e){}
+      }
+    }
+
+    const groups = new Map();
+    poly.forEach((e,i)=>{
+      const r = find(i);
+      if (!groups.has(r)) groups.set(r, []);
+      groups.get(r).push(e);
+    });
+
+    const out = [];
+    for (const members of groups.values()){
+      if (members.length === 1){ out.push(members[0]); continue; }
+
+      let geom = members[0].geom;
+      for (let k=1; k<members.length; k++){
+        try { geom = asGeom(turf.union(geom, members[k].geom)) || geom; } catch(e){}
+      }
+      // Morphological close across the whole cluster to fill narrow gaps
+      // that survive the union (e.g. tiny seams between adjoining polygons).
+      try {
+        const b = asGeom(turf.buffer(geom, 4, {units:'kilometers', steps:32}));
+        const s = asGeom(turf.buffer(b, -4, {units:'kilometers', steps:32}));
+        if (s) geom = s;
+      } catch(e){}
+
+      const times = members.map(m => new Date(m.time).getTime());
+      const host = Object.assign({}, members[0], {
+        key: 'cluster-' + members.map(m => m.key).sort().join('|').slice(0, 200),
+        geom,
+        hail:  Math.max(...members.map(m => m.hail || 0)),
+        gust:  Math.max(...members.map(m => m.gust || 0)),
+        lvl:   Math.max(...members.map(m => m.lvl  || 0)),
+        kinds: Array.from(new Set(members.flatMap(m => m.kinds || []))),
+        sources: Array.from(new Set(members.flatMap(m => m.sources || []))),
+        hits:  Array.from(new Set(members.flatMap(m => m.hits || []))),
+        time:  new Date(Math.max(...times)),
+        timeStart: new Date(Math.min(...times)),
+        memberCount: members.length,
+        motion: (members.find(m => m.motion) || {}).motion || null,
+        main:  members.reduce((a,b) => (b.lvl > a.lvl ? b : a)).main
+      });
+      try {
+        const c = turf.center(geom).geometry.coordinates;
+        host.lng = c[0]; host.lat = c[1];
+      } catch(e){}
+      out.push(host);
+    }
+    return out.concat(pts);
   }
 
   /* ================================================================ */
@@ -1243,7 +1327,7 @@ whenReady(function init(){
   /* HOVER ENGINE                                                     */
   /* ================================================================ */
   const hoverEl = $('hoverInfo');
-  
+
   map.on('mousemove', function(ev) {
     if (!state.layers.warn || state.tab === 'detector') {
       hoverEl.classList.remove('on');
@@ -1253,18 +1337,15 @@ whenReady(function init(){
     const lat = ev.latlng.lat;
     const lng = ev.latlng.lng;
     const pt = [lng, lat];
-    
+
     let hit = null;
     let zoneLabel = '';
-    
+
     const shown = getShown();
-    // Iterate from newest/highest priority to oldest so top-most storm wins
     for (let i = 0; i < shown.length; i++) {
       const e = shown[i];
       if (!e._zones) continue;
-      
-      // Check the zones from innermost (darkest) to outermost.
-      // We iterate backwards because the darkest zone is at the end of the array.
+
       for (let z = e._zones.length - 1; z >= 0; z--) {
         const zone = e._zones[z];
         if (window.turf && turf.booleanPointInPolygon(pt, zone.geom)) {
@@ -1801,7 +1882,12 @@ whenReady(function init(){
     setSource('awc', m.status === 'fulfilled', m.status === 'fulfilled' ? ((m.value || []).length + ' METARs') : 'unreachable');
 
     const merged = deduplicate(raw, 20, 45);
-    state.events = merged.filter(e => pointInCounty(e.lat, e.lng));
+
+    // Cluster overlapping / nearby polygons into whole storm systems.
+    // Without this step every warning polygon appears as its own "storm",
+    // so a squall line looks like 5 scattered cells instead of 1 swath.
+    const clustered = clusterAndMerge(merged);
+    state.events = clustered.filter(eventInCounty);
 
     state.loading = false;
     const t = new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
@@ -1890,6 +1976,9 @@ whenReady(function init(){
         const cls = s === 'NWS' ? 'nws' : s === 'IEM' ? 'iem' : s === 'LSR' ? 'lsr' : s === 'AWC' ? 'awc' : s === 'MRMS' ? 'mrms' : '';
         return '<span class="src-tag ' + cls + '">' + esc(s) + '</span>';
       }).join('');
+      const memberBadge = e.memberCount && e.memberCount > 1
+        ? '<span class="src-tag" style="border-color:rgba(255,200,87,.5);color:var(--amber)">' + e.memberCount + ' POLYS</span>'
+        : '';
       li.innerHTML =
         '<div class="rail"></div>' +
         '<div class="card-body">' +
@@ -1899,7 +1988,7 @@ whenReady(function init(){
             (e.gust ? '<span><b>' + e.gust + '</b> MPH</span>' : '') +
             motion +
           '</div>' +
-          '<div class="card-src">' + sourceTags + '</div>' +
+          '<div class="card-src">' + memberBadge + sourceTags + '</div>' +
           '<div class="card-meta">' +
             '<span>' + esc(fmt(e.time)) + '</span>' +
             (e.hits && e.hits.length ? '<span class="conf">● ' + e.hits.length + ' CONFIRMED</span>' : '') +
@@ -1932,19 +2021,17 @@ whenReady(function init(){
   }
 
   /* ================================================================ */
-  /* HAIL SWATH RENDERING — proper geodesic inward-buffer             */
+  /* HAIL SWATH RENDERING — capped geodesic inward buffer             */
+  /* The inset distance is measured in absolute km, then clamped by   */
+  /* the polygon's narrow half-width so it can never split the shape. */
   /* ================================================================ */
   function renderHailSwath(e){
     const hail = e.hail || 0;
     if (!e.geom || e.geom.type === 'Point') return;
 
-    // 1. Cloudify (morphological closing) to fill gaps and round corners
     const cloudified = cloudifyGeometry(e.geom);
-    // 2. Chaikin smooth for a soft, organic feel (3 iterations)
     const smoothed = smoothGeometry(cloudified, 3);
-
-    // Storm radius → buffering scale
-    const radiusKm = stormRadiusKm(smoothed);
+    const halfWidthKm = localHalfWidthKm(smoothed);
 
     // Transparent click-catcher (original geometry, so edge clicks land)
     const catcher = L.geoJSON(e.geom, {
@@ -1966,23 +2053,19 @@ whenReady(function init(){
     );
     e._layer = catcher;
 
-    // Prepare hover zones
     e._zones = [];
 
-    // Draw bands outermost → innermost
     HAIL_ZONES.forEach(z => {
       if (hail < z.min) return;
 
-      // Band 0 is the full storm — no inset
-      let zoneGeom;
-      if (z.insetFraction <= 0){
-        zoneGeom = smoothed;
-      } else {
-        zoneGeom = insetGeometry(smoothed, z.insetFraction, radiusKm);
-        if (!zoneGeom) return; // inset collapsed — skip this band
-      }
+      // Cap the inset by 60% of half-width. This is the critical fix:
+      // without it, a 100x30 km squall line would erode 10+ km inward,
+      // which is more than its half-width (15 km) and turf.buffer would
+      // split it into two lobes — making one storm look like many.
+      const km = Math.min(z.insetKm, halfWidthKm * 0.6);
+      const zoneGeom = km <= 0.1 ? smoothed : insetByKm(smoothed, km);
+      if (!zoneGeom) return;
 
-      // Store for hover engine
       e._zones.push({ geom: zoneGeom, label: z.label });
 
       L.geoJSON(zoneGeom, {
@@ -2000,7 +2083,6 @@ whenReady(function init(){
       }).addTo(warnGroup);
     });
 
-    // Selection halo
     if (state.selected === e.key){
       L.geoJSON(smoothed, {
         pane: 'warn',
@@ -2015,7 +2097,6 @@ whenReady(function init(){
       }).addTo(warnGroup);
     }
 
-    // Permanent label for severe/selected
     if (e.lvl >= 2 || state.selected === e.key){
       L.tooltip({permanent:true, direction:'center', className:'evt-label', interactive:false})
         .setLatLng([e.lat, e.lng]).setContent(esc(heading(e))).addTo(markGroup);
@@ -2258,7 +2339,8 @@ whenReady(function init(){
     if (e.tornado) factors += '<span class="factor hot">TORNADO ' + esc(e.tornado) + '</span>';
     if (e.threat) factors += '<span class="factor hot">' + esc(e.threat) + ' THREAT</span>';
     if (e.hits && e.hits.length) factors += '<span class="factor ok">' + e.hits.length + ' GROUND CONFIRMED</span>';
-    if (e.geom && e.geom.type !== 'Point') factors += '<span class="factor info">SCIT POLYGON</span>';
+    if (e.memberCount && e.memberCount > 1) factors += '<span class="factor info">' + e.memberCount + ' MERGED POLYS</span>';
+    else if (e.geom && e.geom.type !== 'Point') factors += '<span class="factor info">SCIT POLYGON</span>';
     if (!factors) factors = '<span class="factor">NO DAMAGE FACTORS LISTED</span>';
 
     const srcTags = (e.sources || []).map(s => {
@@ -2396,7 +2478,7 @@ whenReady(function init(){
     const items = keys.map(key => {
       const e = shown.find(x => x.key === key);
       if (!e) return '';
-      return '<div class="item">✓ ' + esc(heading(e)) + ' · ' + esc(fmt(e.time)) + '</div>';
+      return '<div class="item">✓ ' + esc(heading(e)) + ' · ' + esc(fmt(e.time)) + (e.memberCount > 1 ? ' · ' + e.memberCount + ' polys' : '') + '</div>';
     }).filter(Boolean);
     list.innerHTML = items.length
       ? items.join('')
@@ -2982,7 +3064,6 @@ whenReady(function init(){
       b.dataset.v = s.v;
     });
 
-    // Data-layer toggles in the panel
     if ($('dataLayers')){
       const bm = mk('dataLayers', 'MRMS MESH', 'chip amberchip', toggleMRMS);
       bm.dataset.layer = 'mrms';
