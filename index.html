@@ -219,7 +219,6 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 .det-csv{background:rgba(94,231,255,.06);border:1px solid rgba(94,231,255,.28);color:var(--cyan);font:700 8px/1 "JetBrains Mono",monospace;letter-spacing:.12em;padding:9px 0;border-radius:3px;cursor:pointer;transition:.15s}
 .det-csv:hover{background:rgba(94,231,255,.15);border-color:rgba(94,231,255,.55)}
 
-/* Inline full list */
 .det-full-wrap{display:none;margin:12px 17px 0;border:1px solid rgba(255,200,87,.32);border-radius:3px;max-height:360px;flex-direction:column;overflow:hidden;background:rgba(0,0,0,.25)}
 .det-full-wrap.show{display:flex}
 .det-full-head{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(255,200,87,.06);border-bottom:1px solid rgba(255,200,87,.28);font:700 8px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:var(--amber);text-transform:uppercase}
@@ -249,9 +248,13 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 .bmbtn:hover{color:var(--ink);border-color:var(--line)}
 .bmbtn.on{color:var(--cyan);border-color:rgba(94,231,255,.4);background:rgba(94,231,255,.08)}
 
-#legend{position:absolute;z-index:650;right:76px;bottom:36px;background:rgba(8,17,27,.92);border:1px solid var(--line);border-radius:3px;padding:9px 11px;font:600 7.5px/1.9 "JetBrains Mono",monospace;letter-spacing:.09em;color:var(--mute);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#legend{position:absolute;z-index:650;right:76px;bottom:36px;background:rgba(8,17,27,.92);border:1px solid var(--line);border-radius:3px;padding:9px 11px;font:600 7.5px/1.9 "JetBrains Mono",monospace;letter-spacing:.09em;color:var(--mute);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);min-width:140px}
 .leg-row{display:flex;align-items:center;gap:7px}
 .leg-dot{width:7px;height:7px;border-radius:50%;flex:none}
+.leg-title{font:700 7px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:var(--amber);margin-bottom:5px;text-transform:uppercase}
+.leg-band{color:var(--ink);font-size:7px;line-height:1.7}
+.leg-swatch{display:inline-block;width:16px;height:8px;border-radius:1px;flex:none;border:1px solid rgba(255,200,87,.35)}
+.leg-divider{height:1px;background:var(--line);margin:5px 0}
 
 #heatLegend{position:absolute;z-index:650;right:76px;bottom:36px;background:rgba(8,17,27,.92);border:1px solid rgba(255,77,109,.4);border-radius:3px;padding:10px 12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:none;width:180px}
 #heatLegend.on{display:block}
@@ -327,8 +330,6 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 /* ============================================================ */
 /* RESPONSIVE / MOBILE COMPATIBILITY                            */
 /* ============================================================ */
-
-/* Very large displays */
 @media (min-width: 1900px) {
   #topbar { top: calc(18px + var(--safe-t)); left: calc(20px + var(--safe-l)); right: calc(20px + var(--safe-r)); }
   #panel { width: 500px; top: 96px; }
@@ -347,7 +348,6 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .tool { width: 44px; height: 44px; }
   .tool svg { width: 20px; height: 20px; }
 }
-
 @media (min-width: 2400px) {
   #panel { width: 600px; }
   .mode button { font-size: 12px; }
@@ -355,34 +355,20 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .card-top b { font-size: 15px; }
   .stat b { font-size: 26px; }
 }
-
-/* Small laptops */
 @media (max-width: 1300px) {
   #searchCluster { max-width: 600px; }
   #panel { width: 380px; }
 }
-
-/* Tablets — search wraps below brand row */
 @media (max-width: 1000px) {
   #searchCluster { max-width: none; width: 100%; order: 3; flex-direction: column; }
   .brandtext span { display: none; }
 }
-
-/* Large phones / tablets portrait — panel becomes bottom sheet, on top of everything */
 @media (max-width: 880px) {
-  /* Panel is always on top of all floating UI on mobile */
   #panel { z-index: 1000; }
   #panelReopen { z-index: 999; }
-
-  #topbar {
-    top: calc(10px + var(--safe-t));
-    left: calc(10px + var(--safe-l));
-    right: calc(10px + var(--safe-r));
-    gap: 8px;
-  }
+  #topbar { top: calc(10px + var(--safe-t)); left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); gap: 8px; }
   .brandbar { padding: 8px 12px 8px 10px; gap: 9px; }
   .brandtext b { font-size: 11px; letter-spacing: .16em; }
-
   #searchCluster { flex-direction: column; width: 100%; gap: 5px; }
   .search-box { padding: 6px 8px; gap: 6px; }
   .search-box input { font-size: 12px; padding: 9px 6px; }
@@ -391,59 +377,30 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .ac-item { min-height: 48px; padding: 10px 12px; }
   .ac-name { font-size: 12px; }
   .ac-sub { font-size: 9.5px; }
-
-  #panel {
-    left: calc(8px + var(--safe-l));
-    right: calc(8px + var(--safe-r));
-    top: auto;
-    bottom: calc(8px + var(--safe-b));
-    width: auto;
-    height: 65vh;
-    max-height: calc(100vh - 100px - var(--safe-t) - var(--safe-b));
-    border-radius: 14px;
-    box-shadow: 0 -8px 40px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.4), 0 0 40px rgba(94,231,255,.08);
-  }
+  #panel { left: calc(8px + var(--safe-l)); right: calc(8px + var(--safe-r)); top: auto; bottom: calc(8px + var(--safe-b)); width: auto; height: 65vh; max-height: calc(100vh - 100px - var(--safe-t) - var(--safe-b)); border-radius: 14px; box-shadow: 0 -8px 40px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.4), 0 0 40px rgba(94,231,255,.08); }
   #panel.closed { transform: translateY(115%); }
-
-  #panelReopen {
-    left: 50%;
-    right: auto;
-    top: auto;
-    bottom: calc(20px + var(--safe-b));
-    transform: translateX(-50%);
-    width: 62px;
-    height: 62px;
-    border-radius: 31px;
-    box-shadow: 0 8px 32px rgba(94,231,255,.35), 0 0 24px rgba(94,231,255,.2);
-  }
+  #panelReopen { left: 50%; right: auto; top: auto; bottom: calc(20px + var(--safe-b)); transform: translateX(-50%); width: 62px; height: 62px; border-radius: 31px; box-shadow: 0 8px 32px rgba(94,231,255,.35), 0 0 24px rgba(94,231,255,.2); }
   #panelReopen svg { width: 24px; height: 24px; }
-
   .p-head { padding: 14px 16px 12px; }
   .p-head .t { font-size: 9px; letter-spacing: .2em; }
   .p-head .n { font-size: 16px; margin-top: 4px; }
   .p-close { width: 38px; height: 38px; font-size: 20px; border-radius: 4px; }
-
   .mode { margin: 10px 14px 0; }
   .mode button { padding: 14px 0; font-size: 10px; letter-spacing: .12em; }
-
   .sec { padding: 14px 14px 0; }
   .sec h2 { font-size: 8px; margin-bottom: 10px; }
   .g4, .g3 { gap: 5px; }
   .chip { padding: 12px 0; font-size: 10px; letter-spacing: .04em; }
-
   .slider-labels { font-size: 9px; }
   .slider-value { font-size: 10px; padding: 5px 8px; }
   .day-slider { height: 4px; }
   .day-slider::-webkit-slider-thumb { width: 22px; height: 22px; }
   .day-slider::-moz-range-thumb { width: 22px; height: 22px; }
-
   .go-btn { padding: 13px 0; font-size: 10px; }
-
   .stats { margin: 14px 14px 0; }
   .stat { padding: 12px 12px; }
   .stat b { font-size: 22px; }
   .stat small { font-size: 8px; }
-
   #status { padding: 10px 14px 8px; font-size: 9px; }
   #list { padding: 0 10px 8px; }
   .card-body { padding: 12px 12px; }
@@ -452,12 +409,9 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .metrics span { font-size: 9px; }
   .card-meta { font-size: 9px; }
   .src-tag { font-size: 7.5px; padding: 3px 6px; }
-
   .dx { margin: 4px 14px 0; font-size: 9px; }
   .foot { padding: 10px 14px 14px; font-size: 8.5px; }
   .linkbtn { font-size: 10px; padding: 6px 0; }
-
-  /* Detector */
   .det-hint { font-size: 9.5px; padding: 11px 12px; line-height: 1.65; }
   .det-sel-btns { gap: 5px; margin-bottom: 10px; }
   .det-sel-btns .chip { padding: 12px 0; font-size: 10px; }
@@ -478,90 +432,44 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .det-full-head button { width: 28px; height: 28px; font-size: 18px; }
   .det-fl-row { padding: 10px 12px; font-size: 10px; }
   .det-fl-row .b { font-size: 9px; margin-top: 3px; }
-
-  /* Map tools — placed at top-right, below search boxes; now BELOW panel in z-order */
-  #maptools {
-    right: calc(10px + var(--safe-r));
-    top: calc(180px + var(--safe-t));
-    bottom: auto;
-    transform: none;
-    flex-direction: row;
-    gap: 6px;
-    z-index: 650; /* stays below panel (1000) */
-  }
-  .tool {
-    width: 44px;
-    height: 44px;
-    border-radius: 8px;
-    background: rgba(8,17,27,.95);
-    box-shadow: 0 4px 12px rgba(0,0,0,.5);
-  }
+  #maptools { right: calc(10px + var(--safe-r)); top: calc(180px + var(--safe-t)); bottom: auto; transform: none; flex-direction: row; gap: 6px; z-index: 650; }
+  .tool { width: 44px; height: 44px; border-radius: 8px; background: rgba(8,17,27,.95); box-shadow: 0 4px 12px rgba(0,0,0,.5); }
   .tool svg { width: 20px; height: 20px; }
   .tool::after { display: none; }
-
-  /* Basemap hidden on mobile */
   #basemapPicker { display: none; }
-
   #timeline { display: none !important; }
   #legend, #heatLegend { display: none !important; }
   #clock { display: none; }
   #livePill { padding: 8px 10px; font-size: 8px; }
-
-  /* Detail panel — sits above the panel physically so no z-index fight */
-  #detail {
-    left: calc(10px + var(--safe-l));
-    right: calc(10px + var(--safe-r));
-    top: auto;
-    bottom: calc(calc(65vh + 20px) + var(--safe-b));
-    width: auto;
-    max-height: calc(35vh - 60px);
-    border-radius: 12px;
-    padding: 14px;
-    overflow-y: auto;
-    z-index: 660; /* below panel (1000), but positioned above it so no overlap */
-    box-shadow: 0 12px 40px rgba(0,0,0,.6);
-  }
+  #detail { left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); top: auto; bottom: calc(calc(65vh + 20px) + var(--safe-b)); width: auto; max-height: calc(35vh - 60px); border-radius: 12px; padding: 14px; overflow-y: auto; z-index: 660; box-shadow: 0 12px 40px rgba(0,0,0,.6); }
   .det-title { font-size: 16px; }
   .det-cell { padding: 10px 10px; }
   .det-cell b { font-size: 15px; }
   .agg-list { max-height: 30vh; }
 }
-
-/* Phones — additional refinements */
 @media (max-width: 640px) {
-  #topbar {
-    top: calc(8px + var(--safe-t));
-    left: calc(8px + var(--safe-l));
-    right: calc(8px + var(--safe-r));
-    gap: 6px;
-  }
+  #topbar { top: calc(8px + var(--safe-t)); left: calc(8px + var(--safe-l)); right: calc(8px + var(--safe-r)); gap: 6px; }
   .brandbar { padding: 7px 10px 7px 8px; gap: 8px; }
   .logo { width: 24px; height: 24px; font-size: 11px; }
   .brandtext b { font-size: 10px; letter-spacing: .14em; }
-
   #searchCluster { gap: 4px; }
   .search-box { padding: 5px 7px; gap: 5px; }
   .search-box input { font-size: 11px; padding: 8px 5px; }
   .search-btn { font-size: 8px; padding: 8px 9px; }
-
   #panel { height: 62vh; border-radius: 12px; }
-
   .p-head { padding: 12px 14px 10px; }
   .p-head .t { font-size: 8px; }
   .p-head .n { font-size: 15px; }
   .p-close { width: 34px; height: 34px; font-size: 18px; }
-
   .mode { margin: 10px 12px 0; }
   .mode button { padding: 13px 0; font-size: 9px; letter-spacing: .1em; }
   .sec { padding: 12px 12px 0; }
   .sec h2 { font-size: 8px; }
   .chip { padding: 11px 0; font-size: 9px; }
-
   .stats { margin: 12px 12px 0; }
   .stat { padding: 10px 10px; }
   .stat b { font-size: 20px; }
   .stat small { font-size: 7px; }
-
   #status { padding: 9px 12px 7px; font-size: 8.5px; }
   #list { padding: 0 9px 8px; }
   .card-body { padding: 11px 11px; }
@@ -569,139 +477,64 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .badge { font-size: 7.5px; padding: 3px 5px; }
   .metrics span { font-size: 8.5px; }
   .card-meta { font-size: 8px; }
-
   .det-hint { font-size: 9px; padding: 10px; }
   .det-sel-list { font-size: 9px; max-height: 80px; }
   .det-check { padding: 11px; font-size: 10px; }
   .det-check code { font-size: 9.5px; }
   .det-row { font-size: 9.5px; }
   .det-row input { width: 110px; font-size: 10px; }
-
   .det-actions { padding: 12px 12px 0; }
   .det-full-wrap { margin: 10px 12px 0; max-height: 35vh; }
   .det-fl-row { padding: 8px 10px; font-size: 9.5px; }
-
   .foot { padding: 10px 12px 12px; font-size: 8px; }
-
-  #maptools {
-    top: calc(160px + var(--safe-t));
-    gap: 5px;
-  }
+  #maptools { top: calc(160px + var(--safe-t)); gap: 5px; }
   .tool { width: 42px; height: 42px; }
   .tool svg { width: 18px; height: 18px; }
-
   #panelReopen { width: 58px; height: 58px; }
   #panelReopen svg { width: 22px; height: 22px; }
-
-  /* Detail stays as a floating card above the panel — never a full-screen modal.
-     This keeps the panel visible at all times on mobile. */
-  #detail {
-    left: calc(8px + var(--safe-l));
-    right: calc(8px + var(--safe-r));
-    top: calc(110px + var(--safe-t));
-    bottom: auto;
-    max-height: calc(38vh - 120px);
-    border-radius: 12px;
-    padding: 12px;
-    overflow-y: auto;
-    z-index: 660;
-    box-shadow: 0 12px 40px rgba(0,0,0,.6);
-  }
+  #detail { left: calc(8px + var(--safe-l)); right: calc(8px + var(--safe-r)); top: calc(110px + var(--safe-t)); bottom: auto; max-height: calc(38vh - 120px); border-radius: 12px; padding: 12px; overflow-y: auto; z-index: 660; box-shadow: 0 12px 40px rgba(0,0,0,.6); }
   .det-title { font-size: 15px; }
   .det-close { width: 32px; height: 32px; font-size: 16px; }
   .agg-list { max-height: 25vh; }
 }
-
-/* Very small phones */
 @media (max-width: 400px) {
   #panel { height: 60vh; }
   .brandtext b { font-size: 9px; }
   .logo { width: 22px; height: 22px; font-size: 10px; }
-
   .g4 { grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .g4 .chip { font-size: 8px; padding: 10px 0; }
   .g3 { grid-template-columns: repeat(2, 1fr); gap: 4px; }
-
   .mode button { font-size: 9px; letter-spacing: .06em; }
-
   .det-row { flex-direction: column; align-items: stretch; gap: 5px; }
   .det-row input { width: 100%; text-align: left; }
   .det-check .hint { display: none; }
-
   .card-top b { font-size: 11px; }
   .metrics span { font-size: 8px; }
-
   .tool { width: 40px; height: 40px; }
   .tool svg { width: 16px; height: 16px; }
-
   #panelReopen { width: 56px; height: 56px; }
-
   .det-full-head span { font-size: 8px; }
   .det-fl-row { font-size: 9px; }
-
-  #detail {
-    top: calc(100px + var(--safe-t));
-    max-height: calc(40vh - 110px);
-  }
+  #detail { top: calc(100px + var(--safe-t)); max-height: calc(40vh - 110px); }
 }
-
-/* Landscape phones / short viewports — panel becomes a left-side drawer, always on top */
 @media (max-height: 520px) and (orientation: landscape) {
   #panel { z-index: 1000; }
   #panelReopen { z-index: 999; }
-
-  #topbar {
-    top: calc(8px + var(--safe-t));
-    left: calc(10px + var(--safe-l));
-    right: calc(10px + var(--safe-r));
-    gap: 8px;
-    flex-wrap: nowrap;
-    align-items: center;
-  }
+  #topbar { top: calc(8px + var(--safe-t)); left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); gap: 8px; flex-wrap: nowrap; align-items: center; }
   .brandbar { padding: 6px 10px 6px 8px; flex-shrink: 0; }
   .logo { width: 22px; height: 22px; font-size: 10px; }
   .brandtext b { font-size: 10px; letter-spacing: .14em; }
   .brandtext span { display: none; }
-
-  #searchCluster {
-    flex: 1;
-    flex-direction: row;
-    max-width: none;
-    order: 0;
-    gap: 5px;
-  }
+  #searchCluster { flex: 1; flex-direction: row; max-width: none; order: 0; gap: 5px; }
   .search-box { padding: 4px 6px; }
   .search-box input { font-size: 10px; padding: 6px 4px; }
   .search-btn { font-size: 7.5px; padding: 6px 8px; }
-
   .status-cluster { flex-shrink: 0; }
   #livePill { padding: 6px 8px; font-size: 7px; }
   #clock { display: none; }
-
-  #panel {
-    top: calc(52px + var(--safe-t));
-    bottom: calc(8px + var(--safe-b));
-    left: calc(8px + var(--safe-l));
-    right: auto;
-    width: 340px;
-    max-width: 45vw;
-    height: auto;
-    max-height: none;
-    border-radius: 12px;
-  }
+  #panel { top: calc(52px + var(--safe-t)); bottom: calc(8px + var(--safe-b)); left: calc(8px + var(--safe-l)); right: auto; width: 340px; max-width: 45vw; height: auto; max-height: none; border-radius: 12px; }
   #panel.closed { transform: translateX(-110%); }
-
-  #panelReopen {
-    left: 14px;
-    right: auto;
-    top: auto;
-    bottom: 14px;
-    transform: none;
-    width: 54px;
-    height: 54px;
-    border-radius: 27px;
-  }
-
+  #panelReopen { left: 14px; right: auto; top: auto; bottom: 14px; transform: none; width: 54px; height: 54px; border-radius: 27px; }
   .mode { margin: 8px 12px 0; }
   .mode button { padding: 10px 0; font-size: 9px; }
   .sec { padding: 10px 12px 0; }
@@ -714,31 +547,12 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .stat small { font-size: 7px; }
   #status { padding: 8px 12px 5px; font-size: 8px; }
   .card-body { padding: 9px 10px; }
-
-  #maptools {
-    right: calc(10px + var(--safe-r));
-    top: calc(52px + var(--safe-t));
-    bottom: auto;
-    flex-direction: row;
-    gap: 5px;
-  }
+  #maptools { right: calc(10px + var(--safe-r)); top: calc(52px + var(--safe-t)); bottom: auto; flex-direction: row; gap: 5px; }
   .tool { width: 40px; height: 40px; }
-
-  #detail {
-    left: auto;
-    right: calc(10px + var(--safe-r));
-    top: calc(52px + var(--safe-t));
-    bottom: auto;
-    width: 340px;
-    max-width: 45vw;
-    max-height: calc(100vh - 70px - var(--safe-t) - var(--safe-b));
-    padding: 12px;
-  }
+  #detail { left: auto; right: calc(10px + var(--safe-r)); top: calc(52px + var(--safe-t)); bottom: auto; width: 340px; max-width: 45vw; max-height: calc(100vh - 70px - var(--safe-t) - var(--safe-b)); padding: 12px; }
   .det-title { font-size: 14px; }
-
   #basemapPicker { display: none; }
   #timeline, #legend, #heatLegend { display: none !important; }
-
   .det-hint { font-size: 9px; padding: 8px; }
   .det-sel-list { max-height: 60px; font-size: 8.5px; }
   .det-check { padding: 9px 10px; font-size: 9.5px; }
@@ -747,8 +561,6 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .det-run-btn { padding: 11px 0; font-size: 9px; }
   .det-full-wrap { max-height: 30vh; }
 }
-
-/* Touch devices — larger minimum tap targets */
 @media (hover: none) and (pointer: coarse) {
   .tool::after { display: none !important; }
   .bmbtn { min-height: 40px; }
@@ -759,7 +571,6 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .det-run-btn { min-height: 48px; }
   .card:hover { transform: none; }
 }
-
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
@@ -983,7 +794,12 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 </div>
 
 <div id="legend">
-  <div class="leg-row"><i class="leg-dot" style="background:#ffc857"></i>HAIL</div>
+  <div class="leg-title">HAIL SWATH</div>
+  <div class="leg-row leg-band"><span class="leg-swatch" style="background:rgba(255,210,122,0.28)"></span>0.50" OUTER</div>
+  <div class="leg-row leg-band"><span class="leg-swatch" style="background:rgba(255,184,64,0.48)"></span>0.50" CORE</div>
+  <div class="leg-row leg-band"><span class="leg-swatch" style="background:rgba(255,140,42,0.68)"></span>0.75" CORE</div>
+  <div class="leg-row leg-band"><span class="leg-swatch" style="background:rgba(255,77,109,0.85)"></span>1.00"+ CORE</div>
+  <div class="leg-divider"></div>
   <div class="leg-row"><i class="leg-dot" style="background:#5ee7ff"></i>WIND</div>
   <div class="leg-row"><i class="leg-dot" style="background:#ff4d6d"></i>TORNADO</div>
   <div class="leg-row"><i class="leg-dot" style="background:#b18cff"></i>DUST</div>
@@ -1032,6 +848,21 @@ whenReady(function init(){
   const STORAGE_KEY = 'hailpath_state_v1';
   const PARCEL_CSV_URL = 'https://raw.githubusercontent.com/x01dev/dbshi/refs/heads/main/shingles_coords.csv';
   const VALID_ROOFS = ['AS - ASPHALT', 'AB - ASBESTOS SHINGLE', 'AB - ABESTOS SHINGLE'];
+
+  // Hail intensity layers — outermost to innermost.
+  // Each zone has:
+  //   min    = minimum hail size required for the zone to render
+  //   scale  = fraction of the original storm polygon to use (1 = full size)
+  //   fill   = rgba fill (alpha already applied)
+  //   stroke = rgba stroke
+  //   weight = border thickness
+  //   label  = legend label
+  const HAIL_ZONES = [
+    { min: 0.50, scale: 1.00, fill: 'rgba(255,210,122,0.16)', stroke: 'rgba(255,210,122,0.85)', weight: 1.0, label: '0.50" outer' },
+    { min: 0.50, scale: 0.74, fill: 'rgba(255,184,64,0.28)',  stroke: 'rgba(255,184,64,0.95)',  weight: 1.2, label: '0.50" core'  },
+    { min: 0.75, scale: 0.48, fill: 'rgba(255,140,42,0.40)',  stroke: 'rgba(255,140,42,1)',     weight: 1.4, label: '0.75" core'  },
+    { min: 1.00, scale: 0.24, fill: 'rgba(255,77,109,0.55)',  stroke: 'rgba(255,77,109,1)',     weight: 1.7, label: '1.00"+ core' }
+  ];
 
   const WINDOWS = [
     {k:'7d',  l:'7 DAY',  h:168},
@@ -1225,6 +1056,65 @@ whenReady(function init(){
     return esc(text.slice(0, idx)) +
       '<mark>' + esc(text.slice(idx, idx + query.length)) + '</mark>' +
       esc(text.slice(idx + query.length));
+  }
+
+  /* ================================================================ */
+  /* HAIL SWATH GEOMETRY HELPERS                                      */
+  /* ================================================================ */
+  // Chaikin's corner-cutting — produces a smooth, curved ring from an
+  // arbitrary vertex list. Removing/re-adding the closing vertex makes
+  // the polygon render identically in Leaflet.
+  function chaikinSmooth(ringIn, iterations){
+    let r = ringIn.slice();
+    if (r.length > 1 && r[0][0] === r[r.length-1][0] && r[0][1] === r[r.length-1][1]) {
+      r = r.slice(0, -1);
+    }
+    if (r.length < 3) return ringIn.slice();
+    for (let it = 0; it < iterations; it++){
+      if (r.length < 3) break;
+      const out = [];
+      for (let i = 0; i < r.length; i++){
+        const p0 = r[i];
+        const p1 = r[(i + 1) % r.length];
+        out.push([0.75*p0[0] + 0.25*p1[0], 0.75*p0[1] + 0.25*p1[1]]);
+        out.push([0.25*p0[0] + 0.75*p1[0], 0.25*p0[1] + 0.75*p1[1]]);
+      }
+      r = out;
+    }
+    r.push(r[0]);
+    return r;
+  }
+
+  function smoothGeometry(geom, iterations){
+    if (!geom) return null;
+    if (geom.type === 'Polygon'){
+      return {
+        type: 'Polygon',
+        coordinates: geom.coordinates.map((ring, idx) => idx === 0 ? chaikinSmooth(ring, iterations) : ring)
+      };
+    }
+    if (geom.type === 'MultiPolygon'){
+      return {
+        type: 'MultiPolygon',
+        coordinates: geom.coordinates.map(poly =>
+          poly.map((ring, idx) => idx === 0 ? chaikinSmooth(ring, iterations) : ring)
+        )
+      };
+    }
+    return geom;
+  }
+
+  function scaleGeometryTowardCentroid(geom, factor){
+    const cent = centroid(geom);
+    const cy = cent[0], cx = cent[1];
+    const scale = ring => ring.map(([x, y]) => [cx + (x - cx) * factor, cy + (y - cy) * factor]);
+    if (geom.type === 'Polygon'){
+      return { type: 'Polygon', coordinates: geom.coordinates.map(scale) };
+    }
+    if (geom.type === 'MultiPolygon'){
+      return { type: 'MultiPolygon', coordinates: geom.coordinates.map(p => p.map(scale)) };
+    }
+    return geom;
   }
 
   /* ================================================================ */
@@ -1852,6 +1742,88 @@ whenReady(function init(){
     return L.divIcon({html, className:'wa', iconSize:[84, size + 20], iconAnchor:[42, (size + 20) / 2]});
   }
 
+  /* ================================================================ */
+  /* HAIL SWATH RENDERING                                             */
+  /* ================================================================ */
+  // Renders a storm as a set of nested, curved hail-intensity bands.
+  // The outermost band always renders when hail ≥ 0.5". Inner bands
+  // only appear when the storm's max hail meets their minimum threshold.
+  // Click handling is done by a transparent catcher polygon on the
+  // original (unsmoothed) geometry so edge clicks still register.
+  function renderHailSwath(e){
+    const hail = e.hail || 0;
+    if (!e.geom || e.geom.type === 'Point') return;
+
+    // Two smoothing passes → corners become gentle curves, still recognizable
+    const smoothed = smoothGeometry(e.geom, 2);
+
+    // 1) Transparent click catcher on the ORIGINAL geometry (bottom layer).
+    //    Clicks on the swath above pass through (swath is interactive:false).
+    const catcher = L.geoJSON(e.geom, {
+      pane: 'warn',
+      style: {
+        color: 'transparent',
+        weight: 0,
+        opacity: 0,
+        fillColor: '#000',
+        fillOpacity: 0.02
+      },
+      interactive: true
+    }).addTo(warnGroup);
+
+    catcher.on('click', ev => { L.DomEvent.stopPropagation(ev); selectEvent(e, false); });
+    catcher.bindTooltip(
+      '<b>' + esc(heading(e)) + '</b><br>' + esc(TIER[e.lvl]),
+      {className:'evt-tip', direction:'top', sticky:true, opacity:1}
+    );
+    e._layer = catcher;
+
+    // 2) Draw the concentric intensity bands from outside-in. Because
+    //    each inner zone is smaller and stacked on top, the visual
+    //    result is a gradient swath: light outside, dark core.
+    HAIL_ZONES.forEach(z => {
+      if (hail < z.min) return;
+      const scaled = z.scale < 1
+        ? scaleGeometryTowardCentroid(smoothed, z.scale)
+        : smoothed;
+
+      L.geoJSON(scaled, {
+        pane: 'warn',
+        style: {
+          color: z.stroke,
+          weight: z.weight,
+          opacity: 1,
+          fillColor: z.fill,
+          fillOpacity: 1,
+          lineJoin: 'round',
+          lineCap: 'round'
+        },
+        interactive: false
+      }).addTo(warnGroup);
+    });
+
+    // 3) Selected storm gets an extra halo around the outer ring.
+    if (state.selected === e.key){
+      L.geoJSON(smoothed, {
+        pane: 'warn',
+        style: {
+          color: '#ffc857',
+          weight: 6,
+          opacity: 0.35,
+          fill: false,
+          lineJoin: 'round'
+        },
+        interactive: false
+      }).addTo(warnGroup);
+    }
+
+    // 4) Permanent label for high-risk or selected storms.
+    if (e.lvl >= 2 || state.selected === e.key){
+      L.tooltip({permanent:true, direction:'center', className:'evt-label', interactive:false})
+        .setLatLng([e.lat, e.lng]).setContent(esc(heading(e))).addTo(markGroup);
+    }
+  }
+
   function renderMap(shown){
     warnGroup.clearLayers();
     markGroup.clearLayers();
@@ -1869,6 +1841,7 @@ whenReady(function init(){
       const renderOrder = long ? shown.slice().reverse() : shown;
 
       if (long){
+        // Damage-history mode: heatmap-style single-color polygons
         renderOrder.forEach(e => {
           if (!e.geom) return;
           if (e.geom.type !== 'Point'){
@@ -1891,8 +1864,17 @@ whenReady(function init(){
           }
         });
       } else {
+        // Regular storm view
         shown.forEach(e => {
           if (!e.geom) return;
+
+          // Hail storms with a known size and polygonal geometry → swath
+          if ((e.hail || 0) >= 0.5 && e.geom.type !== 'Point'){
+            renderHailSwath(e);
+            return;
+          }
+
+          // All other storms keep the single-color polygon / dot rendering
           const c = K[e.main].c;
           if (e.geom.type !== 'Point'){
             const layer = L.geoJSON(e.geom, {
@@ -1950,7 +1932,7 @@ whenReady(function init(){
 
     if (state.selected && !long){
       const e = shown.find(x => x.key === state.selected);
-      if (e && e.geom && e.geom.type !== 'Point'){
+      if (e && e.geom && e.geom.type !== 'Point' && (e.hail || 0) < 0.5){
         L.geoJSON(e.geom, {
           pane:'warn',
           style:{color:K[e.main].c, weight:9, opacity:0.18, fill:false, className:'pulse'},
