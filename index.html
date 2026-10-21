@@ -900,7 +900,7 @@ whenReady(function init(){
   const GOES_GIBS_URL = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/{time}/500m/{z}/{y}/{x}.png';
 
   // Hail intensity bands. Each band is created by geodesic inward-buffering
-  // the (smoothed) storm footprint by `insetFraction` × storm radius.
+  // the (cloudified) storm footprint by `insetFraction` × storm radius.
   const HAIL_ZONES = [
     { min: 0.50, insetFraction: 0.00, fill: 'rgba(255,210,122,0.16)', stroke: 'rgba(255,210,122,0.85)', weight: 1.0, label: '0.50" outer' },
     { min: 0.50, insetFraction: 0.20, fill: 'rgba(255,184,64,0.28)',  stroke: 'rgba(255,184,64,0.95)',  weight: 1.2, label: '0.50" core'  },
@@ -1105,7 +1105,7 @@ whenReady(function init(){
   }
 
   /* ================================================================ */
-  /* STORM FOOTPRINT GEOMETRY & SMOOTHING                             */
+  /* STORM FOOTPRINT GEOMETRY & CLOUDIFICATION                        */
   /* ================================================================ */
 
   // Chaikin corner-cutting for organic smoothing of the polygon border.
@@ -1130,26 +1130,7 @@ whenReady(function init(){
     return r;
   }
 
-  function smoothGeometry(geom, iterations){
-    if (!geom) return null;
-    if (geom.type === 'Polygon'){
-      return {
-        type: 'Polygon',
-        coordinates: geom.coordinates.map((ring, idx) => idx === 0 ? chaikinSmooth(ring, iterations) : ring)
-      };
-    }
-    if (geom.type === 'MultiPolygon'){
-      return {
-        type: 'MultiPolygon',
-        coordinates: geom.coordinates.map(poly =>
-          poly.map((ring, idx) => idx === 0 ? chaikinSmooth(ring, iterations) : ring)
-        )
-      };
-    }
-    return geom;
-  }
-
-  // Compute the storm's effective radius in km from its polygon area.
+  // Computes the effective radius of the storm for scaling buffers.
   function stormRadiusKm(geom){
     try {
       if (!window.turf || !turf.area) return 10;
@@ -1160,10 +1141,60 @@ whenReady(function init(){
     }
   }
 
-  // The KEY fix: inward-offset (erode) the polygon geodesically so the
-  // resulting band traces the storm's actual contour. Unlike scaling
-  // toward the centroid, this respects elongation, concavity, and
-  // irregular shapes. Uses turf.buffer with a negative distance.
+  // This is the magic function that gives the storm its "Hail Recon" cloud look.
+  // It densifies the polygon, adds sine-wave noise to the edges, and then heavily
+  // smooths the result to create natural, lumpy, rounded blobs.
+  function cloudifyGeometry(geom) {
+    if (!geom) return null;
+    
+    const processRing = (ring) => {
+      let densified = [];
+      // 1. Densify and add pseudo-random noise
+      for (let i = 0; i < ring.length; i++) {
+        let p1 = ring[i];
+        let p2 = ring[(i + 1) % ring.length];
+        densified.push(p1);
+        
+        let dx = p2[0] - p1[0];
+        let dy = p2[1] - p1[1];
+        let len = Math.sqrt(dx*dx + dy*dy);
+        
+        // Only densify if the segment is large enough (approx > 1km)
+        if (len > 0.01) {
+          let nx = -dy / len;
+          let ny = dx / len;
+          
+          // Deterministic sine-wave noise. Creates lobes and notches.
+          let wobble1 = (Math.sin(i * 1.7) * 0.5 + Math.cos(i * 3.1) * 0.5) * 0.018; 
+          let wobble2 = (Math.cos(i * 2.3) * 0.5 + Math.sin(i * 1.9) * 0.5) * 0.018;
+          
+          densified.push([p1[0] + dx*0.33 + nx*wobble1, p1[1] + dy*0.33 + ny*wobble1]);
+          densified.push([p1[0] + dx*0.66 + nx*wobble2, p1[1] + dy*0.66 + ny*wobble2]);
+        }
+      }
+      
+      // 2. Heavy smoothing (4 passes) to blend the noise into a cloud edge
+      return chaikinSmooth(densified, 4);
+    };
+
+    if (geom.type === 'Polygon') {
+      return {
+        type: 'Polygon',
+        coordinates: geom.coordinates.map((ring, idx) => idx === 0 ? processRing(ring) : ring)
+      };
+    } else if (geom.type === 'MultiPolygon') {
+      return {
+        type: 'MultiPolygon',
+        coordinates: geom.coordinates.map(poly =>
+          poly.map((ring, idx) => idx === 0 ? processRing(ring) : ring)
+        )
+      };
+    }
+    return geom;
+  }
+
+  // Inward-offset (erode) the polygon geodesically so the inner bands
+  // trace the storm's actual contour.
   function insetGeometry(geom, fraction, radiusKm){
     if (fraction <= 0) return geom;
     if (!window.turf || !turf.buffer) return null;
@@ -1172,27 +1203,11 @@ whenReady(function init(){
     try {
       const inset = turf.buffer(geom, -distKm, {units:'kilometers', steps:64});
       if (!inset) return null;
-      // Reject degenerate slivers
       const areaM2 = turf.area(inset);
       if (!areaM2 || areaM2 < 100) return null;
       return inset;
     } catch(e){
       return null;
-    }
-  }
-
-  // Morphological Close: grow slightly then shrink back. This fills in
-  // small gaps and rounds sharp corners, giving a "cloud" appearance.
-  function cloudifyGeometry(geom){
-    if (!window.turf || !turf.buffer) return geom;
-    try {
-      const grown = turf.buffer(geom, 1.5, {units:'kilometers', steps:64});
-      if (!grown) return geom;
-      const shrunk = turf.buffer(grown, -1.5, {units:'kilometers', steps:64});
-      if (!shrunk) return geom;
-      return shrunk;
-    } catch(e) {
-      return geom;
     }
   }
 
@@ -1932,21 +1947,19 @@ whenReady(function init(){
   }
 
   /* ================================================================ */
-  /* HAIL SWATH RENDERING — proper geodesic inward-buffer             */
+  /* HAIL SWATH RENDERING                                             */
   /* ================================================================ */
   function renderHailSwath(e){
     const hail = e.hail || 0;
     if (!e.geom || e.geom.type === 'Point') return;
 
-    // 1. Cloudify (morphological closing) to fill gaps and round corners
+    // 1. Cloudify the geometry (adds noise and rounds into a blob)
     const cloudified = cloudifyGeometry(e.geom);
-    // 2. Chaikin smooth for a soft, organic feel (3 iterations)
-    const smoothed = smoothGeometry(cloudified, 3);
 
-    // Storm radius → buffering scale
-    const radiusKm = stormRadiusKm(smoothed);
+    // 2. Calculate radius based on the cloudified shape for accurate inner bands
+    const radiusKm = stormRadiusKm(cloudified);
 
-    // Transparent click-catcher (original geometry, so edge clicks land)
+    // Transparent click-catcher (original geometry, so edge clicks land accurately)
     const catcher = L.geoJSON(e.geom, {
       pane: 'warn',
       style: {
@@ -1973,17 +1986,31 @@ whenReady(function init(){
     HAIL_ZONES.forEach(z => {
       if (hail < z.min) return;
 
-      // Band 0 is the full storm — no inset
+      // Band 0 is the full cloud — no inset
       let zoneGeom;
       if (z.insetFraction <= 0){
-        zoneGeom = smoothed;
+        zoneGeom = cloudified;
       } else {
-        zoneGeom = insetGeometry(smoothed, z.insetFraction, radiusKm);
+        zoneGeom = insetGeometry(cloudified, z.insetFraction, radiusKm);
         if (!zoneGeom) return; // inset collapsed — skip this band
       }
 
       // Store for hover engine
       e._zones.push({ geom: zoneGeom, label: z.label });
+
+      // Add a faint outer glow to the outermost band to look like radar
+      if (z.insetFraction <= 0) {
+        L.geoJSON(zoneGeom, {
+          pane: 'warn',
+          style: {
+            color: 'transparent',
+            weight: 0,
+            fillColor: z.fill,
+            fillOpacity: 0.5, // faint glow
+          },
+          interactive: false
+        }).addTo(warnGroup);
+      }
 
       L.geoJSON(zoneGeom, {
         pane: 'warn',
@@ -2002,7 +2029,7 @@ whenReady(function init(){
 
     // Selection halo
     if (state.selected === e.key){
-      L.geoJSON(smoothed, {
+      L.geoJSON(cloudified, {
         pane: 'warn',
         style: {
           color: '#ffc857',
