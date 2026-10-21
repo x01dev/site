@@ -1105,7 +1105,7 @@ whenReady(function init(){
   }
 
   /* ================================================================ */
-  /* STORM FOOTPRINT GEOMETRY                                         */
+  /* STORM FOOTPRINT GEOMETRY & SMOOTHING                             */
   /* ================================================================ */
 
   // Chaikin corner-cutting for organic smoothing of the polygon border.
@@ -1160,8 +1160,10 @@ whenReady(function init(){
     }
   }
 
-  // Inward-offset (erode) the polygon geodesically so the inner bands
-  // trace the storm's actual contour.
+  // The KEY fix: inward-offset (erode) the polygon geodesically so the
+  // resulting band traces the storm's actual contour. Unlike scaling
+  // toward the centroid, this respects elongation, concavity, and
+  // irregular shapes. Uses turf.buffer with a negative distance.
   function insetGeometry(geom, fraction, radiusKm){
     if (fraction <= 0) return geom;
     if (!window.turf || !turf.buffer) return null;
@@ -1170,11 +1172,27 @@ whenReady(function init(){
     try {
       const inset = turf.buffer(geom, -distKm, {units:'kilometers', steps:64});
       if (!inset) return null;
+      // Reject degenerate slivers
       const areaM2 = turf.area(inset);
       if (!areaM2 || areaM2 < 100) return null;
       return inset;
     } catch(e){
       return null;
+    }
+  }
+
+  // Morphological Close: grow slightly then shrink back. This fills in
+  // small gaps and rounds sharp corners, giving a "cloud" appearance.
+  function cloudifyGeometry(geom){
+    if (!window.turf || !turf.buffer) return geom;
+    try {
+      const grown = turf.buffer(geom, 1.5, {units:'kilometers', steps:64});
+      if (!grown) return geom;
+      const shrunk = turf.buffer(grown, -1.5, {units:'kilometers', steps:64});
+      if (!shrunk) return geom;
+      return shrunk;
+    } catch(e) {
+      return geom;
     }
   }
 
@@ -1589,8 +1607,8 @@ whenReady(function init(){
   }
 
   function deduplicate(rawEvents, maxDistanceKm, maxTimeMins){
-    maxDistanceKm = maxDistanceKm || 60; // Increased to 60km for safety
-    maxTimeMins   = maxTimeMins   || 90; // Increased to 90 mins for safety
+    maxDistanceKm = maxDistanceKm || 20;
+    maxTimeMins   = maxTimeMins   || 45;
     const merged = [];
     const latThreshold = maxDistanceKm / 111;
 
@@ -1598,28 +1616,18 @@ whenReady(function init(){
       if (!e.time || isNaN(e.time.getTime())) return;
       let matched = null;
       for (const cand of merged){
-        // Time check
+        if (Math.abs(cand.lat - e.lat) > latThreshold) continue;
         if (Math.abs(e.time - cand.time) / 60000 > maxTimeMins) continue;
-
-        // Spatial check: either they are close, OR they physically overlap
-        let isClose = Math.abs(cand.lat - e.lat) <= latThreshold && haversine(e.lat, e.lng, cand.lat, cand.lng) <= maxDistanceKm;
-        let isOverlapping = false;
-        if (window.turf && cand.geom && cand.geom.type !== 'Point' && e.geom && e.geom.type !== 'Point') {
-          try { isOverlapping = turf.booleanIntersects(cand.geom, e.geom); } catch(err){}
-        }
-
-        if (!isClose && !isOverlapping) continue;
-
+        if (haversine(e.lat, e.lng, cand.lat, cand.lng) > maxDistanceKm) continue;
         matched = cand;
         break;
       }
-
       if (matched){
-        // Merge attributes
         if (e.severity > matched.severity){ matched.severity = e.severity; matched.type = e.type; matched.main = e.type; }
         matched.hail = Math.max(matched.hail || 0, e.hail || 0);
         matched.gust = Math.max(matched.gust || 0, e.gust || 0);
         if (e.time > matched.time) matched.time = e.time;
+        if (e.geom && e.geom.type !== 'Point' && (!matched.geom || matched.geom.type === 'Point')) matched.geom = e.geom;
         if (e.motion && !matched.motion) matched.motion = e.motion;
         if (e.tornado) matched.tornado = e.tornado;
         if (e.threat) matched.threat = e.threat;
@@ -1627,33 +1635,6 @@ whenReady(function init(){
         if (e.srcKind === 'live') matched.srcKind = 'live';
         if (matched.sources.indexOf(e.source) === -1) matched.sources.push(e.source);
         if (matched.kinds.indexOf(e.type) === -1) matched.kinds.push(e.type);
-
-        // Merge Geometry physically using union
-        if (window.turf && e.geom && e.geom.type !== 'Point' && matched.geom && matched.geom.type !== 'Point') {
-          try {
-            const union = turf.union(matched.geom, e.geom);
-            if (union) {
-                matched.geom = union;
-                const cent = centroid(union);
-                matched.lat = cent[0];
-                matched.lng = cent[1];
-            }
-          } catch(err) {
-            // Fallback to MultiPolygon if union fails
-            const coords1 = matched.geom.type === 'Polygon' ? [matched.geom.coordinates] : matched.geom.coordinates;
-            const coords2 = e.geom.type === 'Polygon' ? [e.geom.coordinates] : e.geom.coordinates;
-            matched.geom = { type: 'MultiPolygon', coordinates: coords1.concat(coords2) };
-            const cent = centroid(matched.geom);
-            matched.lat = cent[0];
-            matched.lng = cent[1];
-          }
-        } else if (e.geom && e.geom.type !== 'Point' && (!matched.geom || matched.geom.type === 'Point')) {
-          matched.geom = e.geom;
-          const cent = centroid(e.geom);
-          matched.lat = cent[0];
-          matched.lng = cent[1];
-        }
-
       } else {
         const m = Object.assign({}, e);
         m.sources = [e.source];
@@ -1819,7 +1800,7 @@ whenReady(function init(){
     setSource('iem', a.status === 'fulfilled' || b.status === 'fulfilled', a.status === 'fulfilled' ? ((a.value.features || []).length + ' warn / ' + state.reports.length + ' rpts') : 'unreachable');
     setSource('awc', m.status === 'fulfilled', m.status === 'fulfilled' ? ((m.value || []).length + ' METARs') : 'unreachable');
 
-    const merged = deduplicate(raw, 60, 90);
+    const merged = deduplicate(raw, 20, 45);
     state.events = merged.filter(e => pointInCounty(e.lat, e.lng));
 
     state.loading = false;
@@ -1957,8 +1938,10 @@ whenReady(function init(){
     const hail = e.hail || 0;
     if (!e.geom || e.geom.type === 'Point') return;
 
-    // Smooth the polygon borders for an organic look
-    const smoothed = smoothGeometry(e.geom, 2);
+    // 1. Cloudify (morphological closing) to fill gaps and round corners
+    const cloudified = cloudifyGeometry(e.geom);
+    // 2. Chaikin smooth for a soft, organic feel (3 iterations)
+    const smoothed = smoothGeometry(cloudified, 3);
 
     // Storm radius → buffering scale
     const radiusKm = stormRadiusKm(smoothed);
