@@ -1201,8 +1201,8 @@ whenReady(function init(){
   /* STORM SYSTEM CLUSTERING                                          */
   /* Merge overlapping / nearby warning polygons issued within a short */
   /* time window into a single storm system whose geometry is the      */
-  /* union of its members. This is what makes a squall line look like  */
-  /* one continuous swath instead of 4-5 disconnected polygons.        */
+  /* union of its members. Two overlaps are checked: direct geometric  */
+  /* intersection (always merge) and near-contact within BRIDGE_KM.    */
   /* ================================================================ */
   function clusterAndMerge(events){
     const poly = events.filter(e => e.geom && e.geom.type !== 'Point');
@@ -1215,7 +1215,7 @@ whenReady(function init(){
     const union = (a,b) => { a=find(a); b=find(b); if(a!==b) parent[b]=a; };
 
     const BRIDGE_KM = 6;   // merge when polygons come within ~6 km
-    const MAX_HRS   = 6;   // same storm-system time window
+    const MAX_HRS   = 12;  // was 6 — slow squall lines were being split
 
     const bufs = poly.map(e => {
       try { return asGeom(turf.buffer(e.geom, BRIDGE_KM, {units:'kilometers', steps:24})); }
@@ -1226,8 +1226,11 @@ whenReady(function init(){
       for (let j=i+1; j<n; j++){
         if (Math.abs(poly[i].time - poly[j].time) / 3600e3 > MAX_HRS) continue;
         try {
+          // Direct overlap / boundary-sharing → always merge
+          if (turf.booleanIntersects(poly[i].geom, poly[j].geom)){ union(i, j); continue; }
+          // Near-overlap within BRIDGE_KM → also one system
           if (turf.booleanIntersects(bufs[i], poly[j].geom) ||
-              turf.booleanIntersects(bufs[j], poly[i].geom)) union(i, j);
+              turf.booleanIntersects(bufs[j], poly[i].geom)){ union(i, j); }
         } catch(e){}
       }
     }
@@ -1247,11 +1250,12 @@ whenReady(function init(){
       for (let k=1; k<members.length; k++){
         try { geom = asGeom(turf.union(geom, members[k].geom)) || geom; } catch(e){}
       }
-      // Morphological close across the whole cluster to fill narrow gaps
-      // that survive the union (e.g. tiny seams between adjoining polygons).
+      // Morphological close across the whole cluster. Radius matches
+      // BRIDGE_KM so that any two polygons that qualified as one system
+      // are also connected visually in the final shape.
       try {
-        const b = asGeom(turf.buffer(geom, 4, {units:'kilometers', steps:32}));
-        const s = asGeom(turf.buffer(b, -4, {units:'kilometers', steps:32}));
+        const b = asGeom(turf.buffer(geom, 6, {units:'kilometers', steps:32}));
+        const s = asGeom(turf.buffer(b, -6, {units:'kilometers', steps:32}));
         if (s) geom = s;
       } catch(e){}
 
@@ -1708,7 +1712,21 @@ whenReady(function init(){
         matched.hail = Math.max(matched.hail || 0, e.hail || 0);
         matched.gust = Math.max(matched.gust || 0, e.gust || 0);
         if (e.time > matched.time) matched.time = e.time;
-        if (e.geom && e.geom.type !== 'Point' && (!matched.geom || matched.geom.type === 'Point')) matched.geom = e.geom;
+        if (e.geom && e.geom.type !== 'Point'){
+          if (!matched.geom || matched.geom.type === 'Point'){
+            matched.geom = e.geom;
+          } else {
+            // BOTH events carry polygons — union them. Picking one silently
+            // truncated the storm to whichever warning arrived first, which
+            // is what produced the "overlapping when they should be one" shape.
+            try {
+              const u = asGeom(turf.union(matched.geom, e.geom));
+              if (u) matched.geom = u;
+            } catch(err){
+              try { if (turf.area(e.geom) > turf.area(matched.geom)) matched.geom = e.geom; } catch(e2){}
+            }
+          }
+        }
         if (e.motion && !matched.motion) matched.motion = e.motion;
         if (e.tornado) matched.tornado = e.tornado;
         if (e.threat) matched.threat = e.threat;
@@ -1884,8 +1902,10 @@ whenReady(function init(){
     const merged = deduplicate(raw, 20, 45);
 
     // Cluster overlapping / nearby polygons into whole storm systems.
-    // Without this step every warning polygon appears as its own "storm",
-    // so a squall line looks like 5 scattered cells instead of 1 swath.
+    // deduplicate() already unions polygons that share a centroid, but
+    // warning updates typically have shifted centroids and don't match.
+    // This second pass unions any polygons that intersect or come within
+    // BRIDGE_KM of each other, so an evolving storm shows as one shape.
     const clustered = clusterAndMerge(merged);
     state.events = clustered.filter(eventInCounty);
 
@@ -2058,10 +2078,8 @@ whenReady(function init(){
     HAIL_ZONES.forEach(z => {
       if (hail < z.min) return;
 
-      // Cap the inset by 60% of half-width. This is the critical fix:
-      // without it, a 100x30 km squall line would erode 10+ km inward,
-      // which is more than its half-width (15 km) and turf.buffer would
-      // split it into two lobes — making one storm look like many.
+      // Cap the inset by 60% of half-width so a squall line can never
+      // erode more than that and split into two lobes.
       const km = Math.min(z.insetKm, halfWidthKm * 0.6);
       const zoneGeom = km <= 0.1 ? smoothed : insetByKm(smoothed, km);
       if (!zoneGeom) return;
