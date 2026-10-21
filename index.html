@@ -334,6 +334,32 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 .rpt i::after{content:"";position:absolute;inset:-5px;border:1px solid var(--c);border-radius:50%;animation:ping 2.4s infinite}
 @keyframes ping{0%{transform:scale(.45);opacity:.9}80%,100%{transform:scale(1.65);opacity:0}}
 
+/* Map Hover Info Tooltip */
+.map-hover-info {
+  position: absolute;
+  z-index: 1000;
+  background: rgba(8,17,27,.95);
+  border: 1px solid rgba(94,231,255,.4);
+  border-radius: 4px;
+  padding: 10px 14px;
+  pointer-events: none;
+  font: 600 10px/1.4 "JetBrains Mono", monospace;
+  color: var(--ink);
+  box-shadow: 0 8px 24px rgba(0,0,0,.6), 0 0 20px rgba(94,231,255,.1);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  transform: translate(15px, 15px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.map-hover-info.on { opacity: 1; }
+.map-hover-info .hi-title { color: var(--cyan); font-weight: 800; margin-bottom: 4px; font-family: Manrope, sans-serif; font-size: 11px; letter-spacing: .04em;}
+.map-hover-info .hi-row { display: flex; justify-content: space-between; gap: 12px; margin-top: 4px; }
+.map-hover-info .hi-label { color: var(--dim); font-size: 9px; letter-spacing: .08em;}
+.map-hover-info .hi-val { font-weight: 700; }
+.map-hover-info .hi-val.hail { color: var(--amber); }
+.map-hover-info .hi-val.wind { color: var(--cyan); }
+
 /* ============================================================ */
 /* RESPONSIVE / MOBILE COMPATIBILITY                            */
 /* ============================================================ */
@@ -453,6 +479,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .det-cell { padding: 10px 10px; }
   .det-cell b { font-size: 15px; }
   .agg-list { max-height: 30vh; }
+  .map-hover-info { display: none !important; }
 }
 @media (max-width: 640px) {
   #topbar { top: calc(8px + var(--safe-t)); left: calc(8px + var(--safe-l)); right: calc(8px + var(--safe-r)); gap: 6px; }
@@ -585,6 +612,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 </head>
 <body>
 <div id="map"></div>
+<div id="hoverInfo" class="map-hover-info"></div>
 
 <div id="boot">
   <div>
@@ -868,17 +896,11 @@ whenReady(function init(){
   const PARCEL_CSV_URL = 'https://raw.githubusercontent.com/x01dev/dbshi/refs/heads/main/shingles_coords.csv';
   const VALID_ROOFS = ['AS - ASPHALT', 'AB - ASBESTOS SHINGLE', 'AB - ABESTOS SHINGLE'];
 
-  // MRMS MESH is served as a WMS by NWS. If the endpoint below ever moves,
-  // verify current URL at https://mesonet.agron.iastate.edu/ogc/ or
-  // https://mapservices.weather.noaa.gov/
   const MRMS_WMS_URL = 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/mrms.cgi';
-  // GOES-East IR via NASA GIBS (see https://nasa-gibs.github.io/gibs-api-docs/)
   const GOES_GIBS_URL = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/{time}/500m/{z}/{y}/{x}.png';
 
   // Hail intensity bands. Each band is created by geodesic inward-buffering
   // the (smoothed) storm footprint by `insetFraction` × storm radius.
-  // This is the correct way to shrink a polygon — it respects concavity,
-  // elongation, and irregularity, unlike scaling toward the centroid.
   const HAIL_ZONES = [
     { min: 0.50, insetFraction: 0.00, fill: 'rgba(255,210,122,0.16)', stroke: 'rgba(255,210,122,0.85)', weight: 1.0, label: '0.50" outer' },
     { min: 0.50, insetFraction: 0.20, fill: 'rgba(255,184,64,0.28)',  stroke: 'rgba(255,184,64,0.95)',  weight: 1.2, label: '0.50" core'  },
@@ -1083,7 +1105,7 @@ whenReady(function init(){
   }
 
   /* ================================================================ */
-  /* STORM FOOTPRINT GEOMETRY                                         */
+  /* STORM FOOTPRINT GEOMETRY & SMOOTHING                             */
   /* ================================================================ */
 
   // Chaikin corner-cutting for organic smoothing of the polygon border.
@@ -1159,6 +1181,21 @@ whenReady(function init(){
     }
   }
 
+  // Morphological Close: grow slightly then shrink back. This fills in
+  // small gaps and rounds sharp corners, giving a "cloud" appearance.
+  function cloudifyGeometry(geom){
+    if (!window.turf || !turf.buffer) return geom;
+    try {
+      const grown = turf.buffer(geom, 1.5, {units:'kilometers', steps:64});
+      if (!grown) return geom;
+      const shrunk = turf.buffer(grown, -1.5, {units:'kilometers', steps:64});
+      if (!shrunk) return geom;
+      return shrunk;
+    } catch(e) {
+      return geom;
+    }
+  }
+
   /* ================================================================ */
   /* MAP                                                              */
   /* ================================================================ */
@@ -1201,6 +1238,62 @@ whenReady(function init(){
     lyr.on('tileload', () => { if (baseLayer === lyr && ++ok === 1) finish(true); });
     baseFailoverTimeout = setTimeout(() => finish(true), 15000);
   }
+
+  /* ================================================================ */
+  /* HOVER ENGINE                                                     */
+  /* ================================================================ */
+  const hoverEl = $('hoverInfo');
+  
+  map.on('mousemove', function(ev) {
+    if (!state.layers.warn || state.tab === 'detector') {
+      hoverEl.classList.remove('on');
+      return;
+    }
+
+    const lat = ev.latlng.lat;
+    const lng = ev.latlng.lng;
+    const pt = [lng, lat];
+    
+    let hit = null;
+    let zoneLabel = '';
+    
+    const shown = getShown();
+    // Iterate from newest/highest priority to oldest so top-most storm wins
+    for (let i = 0; i < shown.length; i++) {
+      const e = shown[i];
+      if (!e._zones) continue;
+      
+      // Check the zones from innermost (darkest) to outermost.
+      // We iterate backwards because the darkest zone is at the end of the array.
+      for (let z = e._zones.length - 1; z >= 0; z--) {
+        const zone = e._zones[z];
+        if (window.turf && turf.booleanPointInPolygon(pt, zone.geom)) {
+          hit = e;
+          zoneLabel = zone.label;
+          break;
+        }
+      }
+      if (hit) break;
+    }
+
+    if (hit) {
+      hoverEl.innerHTML = `
+        <div class="hi-title">${esc(heading(hit))}</div>
+        <div class="hi-row"><span class="hi-label">ZONE</span> <span class="hi-val" style="color:var(--amber)">${zoneLabel}</span></div>
+        <div class="hi-row"><span class="hi-label">HAIL</span> <span class="hi-val hail">${hit.hail ? hit.hail.toFixed(2) + ' IN' : 'N/A'}</span></div>
+        <div class="hi-row"><span class="hi-label">WIND</span> <span class="hi-val wind">${hit.gust ? hit.gust + ' MPH' : 'N/A'}</span></div>
+      `;
+      hoverEl.style.left = ev.originalEvent.clientX + 'px';
+      hoverEl.style.top = ev.originalEvent.clientY + 'px';
+      hoverEl.classList.add('on');
+    } else {
+      hoverEl.classList.remove('on');
+    }
+  });
+
+  map.on('mouseout', () => {
+    hoverEl.classList.remove('on');
+  });
 
   /* ================================================================ */
   /* RADAR                                                            */
@@ -1304,8 +1397,6 @@ whenReady(function init(){
     state.layers.mrms = !state.layers.mrms;
     if (state.layers.mrms){
       if (!state.mrmsLayer){
-        // MRMS MESH as a transparent WMS overlay. Bounding box is dynamic —
-        // Leaflet handles the request per-tile so it stays in sync with the view.
         state.mrmsLayer = L.tileLayer.wms(MRMS_WMS_URL, {
           layers: 'mrms_mesh',
           format: 'image/png',
@@ -1331,7 +1422,6 @@ whenReady(function init(){
     if (state.layers.sat){
       if (!state.satLayer){
         const today = new Date().toISOString().slice(0,10);
-        // GIBS serves GOES IR as standard tiles; {time} is a required dimension
         const url = GOES_GIBS_URL.replace('{time}', today);
         state.satLayer = L.tileLayer(url, {
           pane: 'sat',
@@ -1848,8 +1938,10 @@ whenReady(function init(){
     const hail = e.hail || 0;
     if (!e.geom || e.geom.type === 'Point') return;
 
-    // Smooth the polygon borders for an organic look
-    const smoothed = smoothGeometry(e.geom, 2);
+    // 1. Cloudify (morphological closing) to fill gaps and round corners
+    const cloudified = cloudifyGeometry(e.geom);
+    // 2. Chaikin smooth for a soft, organic feel (3 iterations)
+    const smoothed = smoothGeometry(cloudified, 3);
 
     // Storm radius → buffering scale
     const radiusKm = stormRadiusKm(smoothed);
@@ -1874,6 +1966,9 @@ whenReady(function init(){
     );
     e._layer = catcher;
 
+    // Prepare hover zones
+    e._zones = [];
+
     // Draw bands outermost → innermost
     HAIL_ZONES.forEach(z => {
       if (hail < z.min) return;
@@ -1886,6 +1981,9 @@ whenReady(function init(){
         zoneGeom = insetGeometry(smoothed, z.insetFraction, radiusKm);
         if (!zoneGeom) return; // inset collapsed — skip this band
       }
+
+      // Store for hover engine
+      e._zones.push({ geom: zoneGeom, label: z.label });
 
       L.geoJSON(zoneGeom, {
         pane: 'warn',
