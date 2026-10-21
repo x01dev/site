@@ -119,6 +119,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 .sec h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}
 .chip{position:relative;font:600 9px/1 "JetBrains Mono",monospace;letter-spacing:.06em;padding:9px 0;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--mute);border-radius:3px;cursor:pointer;transition:.15s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
 .chip:hover{border-color:var(--line2);color:var(--ink)}
 .chip.on{background:rgba(94,231,255,.11);border-color:rgba(94,231,255,.55);color:var(--cyan);box-shadow:0 0 16px rgba(94,231,255,.1)}
@@ -126,6 +127,10 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 .chip.amberchip{background:rgba(255,200,87,.06);border-color:rgba(255,200,87,.32);color:var(--amber)}
 .chip.amberchip:hover{background:rgba(255,200,87,.15);border-color:rgba(255,200,87,.6)}
 .chip.amberchip.on{background:rgba(255,200,87,.18);border-color:rgba(255,200,87,.7);color:var(--amber);box-shadow:0 0 16px rgba(255,200,87,.18)}
+.chip.violetchip{background:rgba(177,140,255,.06);border-color:rgba(177,140,255,.32);color:var(--violet)}
+.chip.violetchip.on{background:rgba(177,140,255,.18);border-color:rgba(177,140,255,.7);color:var(--violet);box-shadow:0 0 16px rgba(177,140,255,.18)}
+.chip.greenchip{background:rgba(61,220,132,.06);border-color:rgba(61,220,132,.32);color:var(--green)}
+.chip.greenchip.on{background:rgba(61,220,132,.18);border-color:rgba(61,220,132,.7);color:var(--green);box-shadow:0 0 16px rgba(61,220,132,.18)}
 .hz{display:flex;align-items:center;justify-content:center;gap:6px}
 .hz::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--k);flex:none;box-shadow:0 0 8px var(--k)}
 .hz:not(.on){opacity:.55}
@@ -174,6 +179,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 .src-tag.iem{border-color:rgba(255,200,87,.4);color:var(--amber)}
 .src-tag.lsr{border-color:rgba(61,220,132,.4);color:var(--green)}
 .src-tag.awc{border-color:rgba(177,140,255,.4);color:var(--violet)}
+.src-tag.mrms{border-color:rgba(255,140,42,.5);color:#ff8c2a}
 .empty{padding:26px 12px;text-align:center;color:var(--mute);font:500 10px/1.7 "JetBrains Mono",monospace;letter-spacing:.02em}
 .empty b{color:var(--cyan);font-weight:700}
 .linkbtn{background:none;border:0;border-bottom:1px dotted var(--cyan);color:var(--cyan);font:600 9px/1 "JetBrains Mono",monospace;letter-spacing:.1em;padding:0 0 2px;cursor:pointer;margin-top:10px}
@@ -288,6 +294,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 .factor{font:600 7.5px/1 "JetBrains Mono",monospace;letter-spacing:.08em;padding:5px 7px;border:1px solid var(--line);border-radius:2px;color:var(--mute)}
 .factor.hot{border-color:rgba(255,77,109,.4);color:var(--red)}
 .factor.ok{border-color:rgba(61,220,132,.35);color:var(--green)}
+.factor.info{border-color:rgba(177,140,255,.35);color:var(--violet)}
 .det-src{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
 .det-meta{margin-top:11px;font:500 8px/1.6 "JetBrains Mono",monospace;color:var(--dim)}
 
@@ -389,7 +396,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .mode button { padding: 14px 0; font-size: 10px; letter-spacing: .12em; }
   .sec { padding: 14px 14px 0; }
   .sec h2 { font-size: 8px; margin-bottom: 10px; }
-  .g4, .g3 { gap: 5px; }
+  .g4, .g3, .g2 { gap: 5px; }
   .chip { padding: 12px 0; font-size: 10px; letter-spacing: .04em; }
   .slider-labels { font-size: 9px; }
   .slider-value { font-size: 10px; padding: 5px 8px; }
@@ -432,7 +439,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .det-full-head button { width: 28px; height: 28px; font-size: 18px; }
   .det-fl-row { padding: 10px 12px; font-size: 10px; }
   .det-fl-row .b { font-size: 9px; margin-top: 3px; }
-  #maptools { right: calc(10px + var(--safe-r)); top: calc(180px + var(--safe-t)); bottom: auto; transform: none; flex-direction: row; gap: 6px; z-index: 650; }
+  #maptools { right: calc(10px + var(--safe-r)); top: calc(180px + var(--safe-t)); bottom: auto; transform: none; flex-direction: row; gap: 6px; z-index: 650; flex-wrap: wrap; max-width: calc(100vw - 20px); justify-content: flex-end; }
   .tool { width: 44px; height: 44px; border-radius: 8px; background: rgba(8,17,27,.95); box-shadow: 0 4px 12px rgba(0,0,0,.5); }
   .tool svg { width: 20px; height: 20px; }
   .tool::after { display: none; }
@@ -503,7 +510,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .logo { width: 22px; height: 22px; font-size: 10px; }
   .g4 { grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .g4 .chip { font-size: 8px; padding: 10px 0; }
-  .g3 { grid-template-columns: repeat(2, 1fr); gap: 4px; }
+  .g3, .g2 { grid-template-columns: repeat(2, 1fr); gap: 4px; }
   .mode button { font-size: 9px; letter-spacing: .06em; }
   .det-row { flex-direction: column; align-items: stretch; gap: 5px; }
   .det-row input { width: 100%; text-align: left; }
@@ -547,7 +554,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   .stat small { font-size: 7px; }
   #status { padding: 8px 12px 5px; font-size: 8px; }
   .card-body { padding: 9px 10px; }
-  #maptools { right: calc(10px + var(--safe-r)); top: calc(52px + var(--safe-t)); bottom: auto; flex-direction: row; gap: 5px; }
+  #maptools { right: calc(10px + var(--safe-r)); top: calc(52px + var(--safe-t)); bottom: auto; flex-direction: row; gap: 5px; flex-wrap: wrap; max-width: 40vw; }
   .tool { width: 40px; height: 40px; }
   #detail { left: auto; right: calc(10px + var(--safe-r)); top: calc(52px + var(--safe-t)); bottom: auto; width: 340px; max-width: 45vw; max-height: calc(100vh - 70px - var(--safe-t) - var(--safe-b)); padding: 12px; }
   .det-title { font-size: 14px; }
@@ -671,6 +678,11 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
         <div class="g4" id="levels"></div>
       </section>
 
+      <section class="sec">
+        <h2>Data layers</h2>
+        <div class="g2" id="dataLayers"></div>
+      </section>
+
       <div class="stats">
         <div class="stat"><b id="sN" class="cyan">0</b><small>Unique storms</small></div>
         <div class="stat"><b id="sTop" class="amber">–</b><small>Highest risk</small></div>
@@ -686,8 +698,8 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
       </details>
 
       <div class="foot">
-        Aggregated sources: NWS alerts · IEM warnings · IEM ground reports · Aviation Weather METAR · RainViewer radar.
-        Duplicates within 20 km / 45 min merged into one unique storm.
+        Sources: NWS alerts · IEM warnings · IEM ground reports · MRMS MESH · GOES-IR satellite · Aviation METAR · RainViewer radar.
+        Hail bands derived via geodesic inward-buffer of the storm footprint.
         <br><button class="linkbtn" id="demoBtn" type="button">LOAD SAMPLE STORM</button>
       </div>
     </div>
@@ -779,6 +791,12 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   <button class="tool on" id="toolReports" data-tip="GROUND REPORTS" aria-pressed="true" type="button">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>
   </button>
+  <button class="tool" id="toolMRMS" data-tip="MRMS MESH" aria-pressed="false" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l4-6 4 3 4-7 6 10"/><circle cx="7" cy="11" r="1.5"/><circle cx="11" cy="14" r="1.5"/><circle cx="15" cy="7" r="1.5"/></svg>
+  </button>
+  <button class="tool" id="toolSat" data-tip="GOES SATELLITE IR" aria-pressed="false" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M4 12h2M18 12h2M12 4v2M12 18v2"/><path d="M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4"/></svg>
+  </button>
   <button class="tool" id="toolRecenter" data-tip="RECENTER" type="button">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="5"/></svg>
   </button>
@@ -794,15 +812,15 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 </div>
 
 <div id="legend">
-  <div class="leg-title">HAIL SWATH</div>
-  <div class="leg-row leg-band"><span class="leg-swatch" style="background:rgba(255,210,122,0.28)"></span>0.50" OUTER</div>
+  <div class="leg-title">HAIL BANDS</div>
+  <div class="leg-row leg-band"><span class="leg-swatch" style="background:rgba(255,210,122,0.28)"></span>0.50"</div>
   <div class="leg-row leg-band"><span class="leg-swatch" style="background:rgba(255,184,64,0.48)"></span>0.50" CORE</div>
-  <div class="leg-row leg-band"><span class="leg-swatch" style="background:rgba(255,140,42,0.68)"></span>0.75" CORE</div>
-  <div class="leg-row leg-band"><span class="leg-swatch" style="background:rgba(255,77,109,0.85)"></span>1.00"+ CORE</div>
+  <div class="leg-row leg-band"><span class="leg-swatch" style="background:rgba(255,140,42,0.68)"></span>0.75"</div>
+  <div class="leg-row leg-band"><span class="leg-swatch" style="background:rgba(255,77,109,0.85)"></span>1.00"+</div>
   <div class="leg-divider"></div>
   <div class="leg-row"><i class="leg-dot" style="background:#5ee7ff"></i>WIND</div>
   <div class="leg-row"><i class="leg-dot" style="background:#ff4d6d"></i>TORNADO</div>
-  <div class="leg-row"><i class="leg-dot" style="background:#b18cff"></i>DUST</div>
+  <div class="leg-row"><i class="leg-dot" style="background:#ff8c2a"></i>MRMS MESH</div>
 </div>
 
 <div id="heatLegend">
@@ -819,6 +837,7 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 <div id="detail" role="dialog" aria-label="Threat detail"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
 <script>
 (function(){
 'use strict';
@@ -849,11 +868,22 @@ whenReady(function init(){
   const PARCEL_CSV_URL = 'https://raw.githubusercontent.com/x01dev/dbshi/refs/heads/main/shingles_coords.csv';
   const VALID_ROOFS = ['AS - ASPHALT', 'AB - ASBESTOS SHINGLE', 'AB - ABESTOS SHINGLE'];
 
+  // MRMS MESH is served as a WMS by NWS. If the endpoint below ever moves,
+  // verify current URL at https://mesonet.agron.iastate.edu/ogc/ or
+  // https://mapservices.weather.noaa.gov/
+  const MRMS_WMS_URL = 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/mrms.cgi';
+  // GOES-East IR via NASA GIBS (see https://nasa-gibs.github.io/gibs-api-docs/)
+  const GOES_GIBS_URL = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GOES-East_ABI_Band13_Clean_Infrared/default/{time}/500m/{z}/{y}/{x}.png';
+
+  // Hail intensity bands. Each band is created by geodesic inward-buffering
+  // the (smoothed) storm footprint by `insetFraction` × storm radius.
+  // This is the correct way to shrink a polygon — it respects concavity,
+  // elongation, and irregularity, unlike scaling toward the centroid.
   const HAIL_ZONES = [
-    { min: 0.50, scale: 1.00, fill: 'rgba(255,210,122,0.16)', stroke: 'rgba(255,210,122,0.85)', weight: 1.0, label: '0.50" outer' },
-    { min: 0.50, scale: 0.74, fill: 'rgba(255,184,64,0.28)',  stroke: 'rgba(255,184,64,0.95)',  weight: 1.2, label: '0.50" core'  },
-    { min: 0.75, scale: 0.48, fill: 'rgba(255,140,42,0.40)',  stroke: 'rgba(255,140,42,1)',     weight: 1.4, label: '0.75" core'  },
-    { min: 1.00, scale: 0.24, fill: 'rgba(255,77,109,0.55)',  stroke: 'rgba(255,77,109,1)',     weight: 1.7, label: '1.00"+ core' }
+    { min: 0.50, insetFraction: 0.00, fill: 'rgba(255,210,122,0.16)', stroke: 'rgba(255,210,122,0.85)', weight: 1.0, label: '0.50" outer' },
+    { min: 0.50, insetFraction: 0.20, fill: 'rgba(255,184,64,0.28)',  stroke: 'rgba(255,184,64,0.95)',  weight: 1.2, label: '0.50" core'  },
+    { min: 0.75, insetFraction: 0.38, fill: 'rgba(255,140,42,0.40)',  stroke: 'rgba(255,140,42,1)',     weight: 1.4, label: '0.75" core'  },
+    { min: 1.00, insetFraction: 0.55, fill: 'rgba(255,77,109,0.55)',  stroke: 'rgba(255,77,109,1)',     weight: 1.7, label: '1.00"+ core' }
   ];
 
   const WINDOWS = [
@@ -896,11 +926,13 @@ whenReady(function init(){
     on:new Set(['hail','wind','tornado','dust','flood']),
     events:[], reports:[], winds:[],
     selected:null, demo:false, loading:false,
-    layers:{warn:true, wind:true, reports:true, mrms:false, lsr:false, fema:false},
+    layers:{warn:true, wind:true, reports:true, mrms:false, sat:false},
     radarHost:'', radarFrames:[], radarIdx:0, radarLayer:null, radarNowIdx:0,
     basemap:'googleRoad',
     detSelection:new Set(),
     detResults:null,
+    mrmsLayer:null,
+    satLayer:null,
     timers:{alerts:null, radar:null, wind:null}
   };
 
@@ -1051,8 +1083,10 @@ whenReady(function init(){
   }
 
   /* ================================================================ */
-  /* HAIL SWATH GEOMETRY HELPERS                                      */
+  /* STORM FOOTPRINT GEOMETRY                                         */
   /* ================================================================ */
+
+  // Chaikin corner-cutting for organic smoothing of the polygon border.
   function chaikinSmooth(ringIn, iterations){
     let r = ringIn.slice();
     if (r.length > 1 && r[0][0] === r[r.length-1][0] && r[0][1] === r[r.length-1][1]) {
@@ -1093,17 +1127,36 @@ whenReady(function init(){
     return geom;
   }
 
-  function scaleGeometryTowardCentroid(geom, factor){
-    const cent = centroid(geom);
-    const cy = cent[0], cx = cent[1];
-    const scale = ring => ring.map(([x, y]) => [cx + (x - cx) * factor, cy + (y - cy) * factor]);
-    if (geom.type === 'Polygon'){
-      return { type: 'Polygon', coordinates: geom.coordinates.map(scale) };
+  // Compute the storm's effective radius in km from its polygon area.
+  function stormRadiusKm(geom){
+    try {
+      if (!window.turf || !turf.area) return 10;
+      const m2 = turf.area(geom);
+      return Math.sqrt(m2 / Math.PI) / 1000;
+    } catch(e){
+      return 10;
     }
-    if (geom.type === 'MultiPolygon'){
-      return { type: 'MultiPolygon', coordinates: geom.coordinates.map(p => p.map(scale)) };
+  }
+
+  // The KEY fix: inward-offset (erode) the polygon geodesically so the
+  // resulting band traces the storm's actual contour. Unlike scaling
+  // toward the centroid, this respects elongation, concavity, and
+  // irregular shapes. Uses turf.buffer with a negative distance.
+  function insetGeometry(geom, fraction, radiusKm){
+    if (fraction <= 0) return geom;
+    if (!window.turf || !turf.buffer) return null;
+    const distKm = radiusKm * fraction;
+    if (distKm <= 0) return geom;
+    try {
+      const inset = turf.buffer(geom, -distKm, {units:'kilometers', steps:64});
+      if (!inset) return null;
+      // Reject degenerate slivers
+      const areaM2 = turf.area(inset);
+      if (!areaM2 || areaM2 < 100) return null;
+      return inset;
+    } catch(e){
+      return null;
     }
-    return geom;
   }
 
   /* ================================================================ */
@@ -1114,6 +1167,8 @@ whenReady(function init(){
   L.control.scale({position:'bottomleft', imperial:true, metric:false}).addTo(map);
 
   map.createPane('countyLines'); map.getPane('countyLines').style.zIndex = 340; map.getPane('countyLines').style.pointerEvents = 'none';
+  map.createPane('sat');    map.getPane('sat').style.zIndex = 230;    map.getPane('sat').style.pointerEvents = 'none';
+  map.createPane('mrms');   map.getPane('mrms').style.zIndex = 240;   map.getPane('mrms').style.pointerEvents = 'none';
   map.createPane('radar');  map.getPane('radar').style.zIndex = 250;  map.getPane('radar').style.pointerEvents = 'none';
   map.createPane('county'); map.getPane('county').style.zIndex = 350;
   map.createPane('warn');   map.getPane('warn').style.zIndex = 400;
@@ -1243,6 +1298,61 @@ whenReady(function init(){
   });
 
   /* ================================================================ */
+  /* MRMS MESH + SATELLITE OVERLAY TOGGLES                           */
+  /* ================================================================ */
+  function toggleMRMS(){
+    state.layers.mrms = !state.layers.mrms;
+    if (state.layers.mrms){
+      if (!state.mrmsLayer){
+        // MRMS MESH as a transparent WMS overlay. Bounding box is dynamic —
+        // Leaflet handles the request per-tile so it stays in sync with the view.
+        state.mrmsLayer = L.tileLayer.wms(MRMS_WMS_URL, {
+          layers: 'mrms_mesh',
+          format: 'image/png',
+          transparent: true,
+          version: '1.1.1',
+          opacity: 0.55,
+          pane: 'mrms',
+          attribution: 'NOAA MRMS MESH / IEM'
+        });
+      }
+      state.mrmsLayer.addTo(map);
+      setSource('mrms', true, 'MRMS MESH WMS live');
+    } else if (state.mrmsLayer && map.hasLayer(state.mrmsLayer)){
+      map.removeLayer(state.mrmsLayer);
+      setSource('mrms', true, 'MRMS MESH hidden');
+    }
+    syncTools();
+    saveState();
+  }
+
+  function toggleSat(){
+    state.layers.sat = !state.layers.sat;
+    if (state.layers.sat){
+      if (!state.satLayer){
+        const today = new Date().toISOString().slice(0,10);
+        // GIBS serves GOES IR as standard tiles; {time} is a required dimension
+        const url = GOES_GIBS_URL.replace('{time}', today);
+        state.satLayer = L.tileLayer(url, {
+          pane: 'sat',
+          opacity: 0.35,
+          maxZoom: 9,
+          maxNativeZoom: 9,
+          tileSize: 256,
+          attribution: 'NASA GIBS / NOAA GOES-East'
+        });
+      }
+      state.satLayer.addTo(map);
+      setSource('sat', true, 'GOES IR live');
+    } else if (state.satLayer && map.hasLayer(state.satLayer)){
+      map.removeLayer(state.satLayer);
+      setSource('sat', true, 'GOES IR hidden');
+    }
+    syncTools();
+    saveState();
+  }
+
+  /* ================================================================ */
   /* COUNTY                                                           */
   /* ================================================================ */
   let countiesLayer = null;
@@ -1286,9 +1396,6 @@ whenReady(function init(){
     setSource('county', true, name);
     await load(true);
     await loadWinds();
-    await loadMRMS();
-    await loadLSR();
-    await loadFEMA();
   }
 
   async function fetchCountyFromTIGER(name){
@@ -1690,7 +1797,7 @@ whenReady(function init(){
         ? '<span><svg class="arr" viewBox="0 0 24 24" style="transform:rotate(' + e.motion.deg + 'deg)"><path d="M12 2l6.5 18L12 16.2 5.5 20z" fill="currentColor"/></svg>' + compassName(e.motion.deg) + (e.motion.mph ? ' ' + e.motion.mph : '') + '</span>'
         : '';
       const sourceTags = (e.sources || []).map(s => {
-        const cls = s === 'NWS' ? 'nws' : s === 'IEM' ? 'iem' : s === 'LSR' ? 'lsr' : s === 'AWC' ? 'awc' : '';
+        const cls = s === 'NWS' ? 'nws' : s === 'IEM' ? 'iem' : s === 'LSR' ? 'lsr' : s === 'AWC' ? 'awc' : s === 'MRMS' ? 'mrms' : '';
         return '<span class="src-tag ' + cls + '">' + esc(s) + '</span>';
       }).join('');
       li.innerHTML =
@@ -1735,14 +1842,19 @@ whenReady(function init(){
   }
 
   /* ================================================================ */
-  /* HAIL SWATH RENDERING                                             */
+  /* HAIL SWATH RENDERING — proper geodesic inward-buffer             */
   /* ================================================================ */
   function renderHailSwath(e){
     const hail = e.hail || 0;
     if (!e.geom || e.geom.type === 'Point') return;
 
+    // Smooth the polygon borders for an organic look
     const smoothed = smoothGeometry(e.geom, 2);
 
+    // Storm radius → buffering scale
+    const radiusKm = stormRadiusKm(smoothed);
+
+    // Transparent click-catcher (original geometry, so edge clicks land)
     const catcher = L.geoJSON(e.geom, {
       pane: 'warn',
       style: {
@@ -1762,13 +1874,20 @@ whenReady(function init(){
     );
     e._layer = catcher;
 
+    // Draw bands outermost → innermost
     HAIL_ZONES.forEach(z => {
       if (hail < z.min) return;
-      const scaled = z.scale < 1
-        ? scaleGeometryTowardCentroid(smoothed, z.scale)
-        : smoothed;
 
-      L.geoJSON(scaled, {
+      // Band 0 is the full storm — no inset
+      let zoneGeom;
+      if (z.insetFraction <= 0){
+        zoneGeom = smoothed;
+      } else {
+        zoneGeom = insetGeometry(smoothed, z.insetFraction, radiusKm);
+        if (!zoneGeom) return; // inset collapsed — skip this band
+      }
+
+      L.geoJSON(zoneGeom, {
         pane: 'warn',
         style: {
           color: z.stroke,
@@ -1783,6 +1902,7 @@ whenReady(function init(){
       }).addTo(warnGroup);
     });
 
+    // Selection halo
     if (state.selected === e.key){
       L.geoJSON(smoothed, {
         pane: 'warn',
@@ -1797,6 +1917,7 @@ whenReady(function init(){
       }).addTo(warnGroup);
     }
 
+    // Permanent label for severe/selected
     if (e.lvl >= 2 || state.selected === e.key){
       L.tooltip({permanent:true, direction:'center', className:'evt-label', interactive:false})
         .setLatLng([e.lat, e.lng]).setContent(esc(heading(e))).addTo(markGroup);
@@ -2039,10 +2160,11 @@ whenReady(function init(){
     if (e.tornado) factors += '<span class="factor hot">TORNADO ' + esc(e.tornado) + '</span>';
     if (e.threat) factors += '<span class="factor hot">' + esc(e.threat) + ' THREAT</span>';
     if (e.hits && e.hits.length) factors += '<span class="factor ok">' + e.hits.length + ' GROUND CONFIRMED</span>';
+    if (e.geom && e.geom.type !== 'Point') factors += '<span class="factor info">SCIT POLYGON</span>';
     if (!factors) factors = '<span class="factor">NO DAMAGE FACTORS LISTED</span>';
 
     const srcTags = (e.sources || []).map(s => {
-      const cls = s === 'NWS' ? 'nws' : s === 'IEM' ? 'iem' : s === 'LSR' ? 'lsr' : s === 'AWC' ? 'awc' : '';
+      const cls = s === 'NWS' ? 'nws' : s === 'IEM' ? 'iem' : s === 'LSR' ? 'lsr' : s === 'AWC' ? 'awc' : s === 'MRMS' ? 'mrms' : '';
       return '<span class="src-tag ' + cls + '">' + esc(s) + '</span>';
     }).join('');
 
@@ -2151,74 +2273,6 @@ whenReady(function init(){
     state.winds = out;
     setSource('wind', out.length > 0, out.length ? out.length + ' stations' : 'unavailable');
     if (state.layers.wind) renderMap(getShown());
-  }
-
-  /* ================================================================ */
-  /* NEW DATA SOURCES: MRMS MESH, LSR, FEMA                          */
-  /* ================================================================ */
-  async function loadMRMS(){
-    if (!state.layers.mrms) return;
-    try {
-      const url = 'https://gribstream.com/api/v2/mrms/timeseries?product=MESH&lat=' + currentCounty.bounds.getCenter().lat + '&lon=' + currentCounty.bounds.getCenter().lng;
-      const j = await getJSON(url, 15000);
-      if (!j || !j.data) throw new Error('No MRMS data');
-      const meshLayer = L.geoJSON(j.data, {
-        pane: 'warn',
-        style: { color: '#ff8c2a', weight: 1.5, opacity: 0.7, fillColor: '#ff8c2a', fillOpacity: 0.15 },
-        interactive: false
-      }).addTo(map);
-      state.layers.mrmsLayer = meshLayer;
-      setSource('mrms', true, 'MRMS MESH loaded');
-    } catch(e) {
-      setSource('mrms', false, 'MRMS unavailable');
-    }
-  }
-
-  async function loadLSR(){
-    if (!state.layers.lsr) return;
-    try {
-      const url = 'https://mesonet.agron.iastate.edu/geojson/lsr.py?hours=24&wfo=ALL';
-      const j = await getJSON(url, 12000);
-      if (!j || !j.features) throw new Error('No LSR data');
-      const lsrLayer = L.geoJSON(j, {
-        pane: 'marks',
-        pointToLayer: (f, latlng) => L.circleMarker(latlng, {
-          radius: 5, color: '#3ddc84', weight: 1.5, fillColor: '#3ddc84', fillOpacity: 0.6
-        }),
-        onEachFeature: (f, layer) => {
-          const p = f.properties || {};
-          layer.bindTooltip('<b>' + esc(p.typetext || 'LSR') + '</b><br>' + esc(p.city || '') + '<br>' + esc(fmt(p.valid)), {className:'evt-tip', direction:'top', opacity:1});
-        }
-      }).addTo(map);
-      state.layers.lsrLayer = lsrLayer;
-      setSource('lsr', true, (j.features.length + ' LSRs'));
-    } catch(e) {
-      setSource('lsr', false, 'LSR unavailable');
-    }
-  }
-
-  async function loadFEMA(){
-    if (!state.layers.fema) return;
-    try {
-      const url = 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/Hailstorms_in_the_US/FeatureServer/0/query?where=1%3D1&outFields=*&f=geojson';
-      const j = await getJSON(url, 15000);
-      if (!j || !j.features) throw new Error('No FEMA data');
-      const femaLayer = L.geoJSON(j, {
-        pane: 'countyLines',
-        style: { color: '#b18cff', weight: 1, opacity: 0.5, fillColor: '#b18cff', fillOpacity: 0.06 },
-        interactive: false
-      }).addTo(map);
-      state.layers.femaLayer = femaLayer;
-      setSource('fema', true, (j.features.length + ' historical hailstorms'));
-    } catch(e) {
-      setSource('fema', false, 'FEMA unavailable');
-    }
-  }
-
-  function toggleLayer(name, layer){
-    if (!layer) return;
-    if (map.hasLayer(layer)) map.removeLayer(layer);
-    else layer.addTo(map);
   }
 
   /* ================================================================ */
@@ -2830,6 +2884,14 @@ whenReady(function init(){
       b.dataset.v = s.v;
     });
 
+    // Data-layer toggles in the panel
+    if ($('dataLayers')){
+      const bm = mk('dataLayers', 'MRMS MESH', 'chip amberchip', toggleMRMS);
+      bm.dataset.layer = 'mrms';
+      const bs = mk('dataLayers', 'GOES IR', 'chip violetchip', toggleSat);
+      bs.dataset.layer = 'sat';
+    }
+
     let sliderDebounce = null;
     $('daySlider').addEventListener('input', e => {
       state.customDays = Math.max(1, Math.min(365, +e.target.value));
@@ -2867,6 +2929,8 @@ whenReady(function init(){
     $('toolWarn').addEventListener('click', () => { state.layers.warn = !state.layers.warn; syncTools(); saveState(); renderMap(getShown()); });
     $('toolWind').addEventListener('click', () => { state.layers.wind = !state.layers.wind; syncTools(); saveState(); renderMap(getShown()); });
     $('toolReports').addEventListener('click', () => { state.layers.reports = !state.layers.reports; syncTools(); saveState(); renderMap(getShown()); });
+    $('toolMRMS').addEventListener('click', toggleMRMS);
+    $('toolSat').addEventListener('click', toggleSat);
     $('toolRecenter').addEventListener('click', () => {
       const wide = window.innerWidth > 880;
       map.flyToBounds(currentCounty.bounds, {
@@ -2958,6 +3022,11 @@ whenReady(function init(){
       b.classList.toggle('on', on);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
+    document.querySelectorAll('#dataLayers .chip').forEach(b => {
+      const on = !!state.layers[b.dataset.layer];
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
 
     const live = isLive();
     const custom = state.win === 'custom';
@@ -2998,8 +3067,12 @@ whenReady(function init(){
     $('toolWarn').classList.toggle('on', state.layers.warn);
     $('toolWind').classList.toggle('on', state.layers.wind);
     $('toolReports').classList.toggle('on', state.layers.reports);
-    ['toolWarn','toolWind','toolReports'].forEach(id => {
-      $(id).setAttribute('aria-pressed', $(id).classList.contains('on') ? 'true' : 'false');
+    if ($('toolMRMS')) $('toolMRMS').classList.toggle('on', !!state.layers.mrms);
+    if ($('toolSat'))  $('toolSat').classList.toggle('on', !!state.layers.sat);
+    ['toolWarn','toolWind','toolReports','toolMRMS','toolSat'].forEach(id => {
+      const el = $(id);
+      if (!el) return;
+      el.setAttribute('aria-pressed', el.classList.contains('on') ? 'true' : 'false');
     });
   }
 
@@ -3048,6 +3121,8 @@ whenReady(function init(){
   loadWinds();
   startTimers();
   if (isLive()) loadRadar();
+  if (state.layers.mrms) toggleMRMS && toggleMRMS();
+  if (state.layers.sat)  toggleSat && toggleSat();
 
   setTimeout(() => $('boot').classList.add('gone'), 1400);
   setTimeout(() => $('boot').remove(), 2200);
