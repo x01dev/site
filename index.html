@@ -849,14 +849,6 @@ whenReady(function init(){
   const PARCEL_CSV_URL = 'https://raw.githubusercontent.com/x01dev/dbshi/refs/heads/main/shingles_coords.csv';
   const VALID_ROOFS = ['AS - ASPHALT', 'AB - ASBESTOS SHINGLE', 'AB - ABESTOS SHINGLE'];
 
-  // Hail intensity layers — outermost to innermost.
-  // Each zone has:
-  //   min    = minimum hail size required for the zone to render
-  //   scale  = fraction of the original storm polygon to use (1 = full size)
-  //   fill   = rgba fill (alpha already applied)
-  //   stroke = rgba stroke
-  //   weight = border thickness
-  //   label  = legend label
   const HAIL_ZONES = [
     { min: 0.50, scale: 1.00, fill: 'rgba(255,210,122,0.16)', stroke: 'rgba(255,210,122,0.85)', weight: 1.0, label: '0.50" outer' },
     { min: 0.50, scale: 0.74, fill: 'rgba(255,184,64,0.28)',  stroke: 'rgba(255,184,64,0.95)',  weight: 1.2, label: '0.50" core'  },
@@ -904,7 +896,7 @@ whenReady(function init(){
     on:new Set(['hail','wind','tornado','dust','flood']),
     events:[], reports:[], winds:[],
     selected:null, demo:false, loading:false,
-    layers:{warn:true, wind:true, reports:true},
+    layers:{warn:true, wind:true, reports:true, mrms:false, lsr:false, fema:false},
     radarHost:'', radarFrames:[], radarIdx:0, radarLayer:null, radarNowIdx:0,
     basemap:'googleRoad',
     detSelection:new Set(),
@@ -1061,9 +1053,6 @@ whenReady(function init(){
   /* ================================================================ */
   /* HAIL SWATH GEOMETRY HELPERS                                      */
   /* ================================================================ */
-  // Chaikin's corner-cutting — produces a smooth, curved ring from an
-  // arbitrary vertex list. Removing/re-adding the closing vertex makes
-  // the polygon render identically in Leaflet.
   function chaikinSmooth(ringIn, iterations){
     let r = ringIn.slice();
     if (r.length > 1 && r[0][0] === r[r.length-1][0] && r[0][1] === r[r.length-1][1]) {
@@ -1297,6 +1286,9 @@ whenReady(function init(){
     setSource('county', true, name);
     await load(true);
     await loadWinds();
+    await loadMRMS();
+    await loadLSR();
+    await loadFEMA();
   }
 
   async function fetchCountyFromTIGER(name){
@@ -1745,20 +1737,12 @@ whenReady(function init(){
   /* ================================================================ */
   /* HAIL SWATH RENDERING                                             */
   /* ================================================================ */
-  // Renders a storm as a set of nested, curved hail-intensity bands.
-  // The outermost band always renders when hail ≥ 0.5". Inner bands
-  // only appear when the storm's max hail meets their minimum threshold.
-  // Click handling is done by a transparent catcher polygon on the
-  // original (unsmoothed) geometry so edge clicks still register.
   function renderHailSwath(e){
     const hail = e.hail || 0;
     if (!e.geom || e.geom.type === 'Point') return;
 
-    // Two smoothing passes → corners become gentle curves, still recognizable
     const smoothed = smoothGeometry(e.geom, 2);
 
-    // 1) Transparent click catcher on the ORIGINAL geometry (bottom layer).
-    //    Clicks on the swath above pass through (swath is interactive:false).
     const catcher = L.geoJSON(e.geom, {
       pane: 'warn',
       style: {
@@ -1778,9 +1762,6 @@ whenReady(function init(){
     );
     e._layer = catcher;
 
-    // 2) Draw the concentric intensity bands from outside-in. Because
-    //    each inner zone is smaller and stacked on top, the visual
-    //    result is a gradient swath: light outside, dark core.
     HAIL_ZONES.forEach(z => {
       if (hail < z.min) return;
       const scaled = z.scale < 1
@@ -1802,7 +1783,6 @@ whenReady(function init(){
       }).addTo(warnGroup);
     });
 
-    // 3) Selected storm gets an extra halo around the outer ring.
     if (state.selected === e.key){
       L.geoJSON(smoothed, {
         pane: 'warn',
@@ -1817,7 +1797,6 @@ whenReady(function init(){
       }).addTo(warnGroup);
     }
 
-    // 4) Permanent label for high-risk or selected storms.
     if (e.lvl >= 2 || state.selected === e.key){
       L.tooltip({permanent:true, direction:'center', className:'evt-label', interactive:false})
         .setLatLng([e.lat, e.lng]).setContent(esc(heading(e))).addTo(markGroup);
@@ -1841,7 +1820,6 @@ whenReady(function init(){
       const renderOrder = long ? shown.slice().reverse() : shown;
 
       if (long){
-        // Damage-history mode: heatmap-style single-color polygons
         renderOrder.forEach(e => {
           if (!e.geom) return;
           if (e.geom.type !== 'Point'){
@@ -1864,17 +1842,12 @@ whenReady(function init(){
           }
         });
       } else {
-        // Regular storm view
         shown.forEach(e => {
           if (!e.geom) return;
-
-          // Hail storms with a known size and polygonal geometry → swath
           if ((e.hail || 0) >= 0.5 && e.geom.type !== 'Point'){
             renderHailSwath(e);
             return;
           }
-
-          // All other storms keep the single-color polygon / dot rendering
           const c = K[e.main].c;
           if (e.geom.type !== 'Point'){
             const layer = L.geoJSON(e.geom, {
@@ -2178,6 +2151,74 @@ whenReady(function init(){
     state.winds = out;
     setSource('wind', out.length > 0, out.length ? out.length + ' stations' : 'unavailable');
     if (state.layers.wind) renderMap(getShown());
+  }
+
+  /* ================================================================ */
+  /* NEW DATA SOURCES: MRMS MESH, LSR, FEMA                          */
+  /* ================================================================ */
+  async function loadMRMS(){
+    if (!state.layers.mrms) return;
+    try {
+      const url = 'https://gribstream.com/api/v2/mrms/timeseries?product=MESH&lat=' + currentCounty.bounds.getCenter().lat + '&lon=' + currentCounty.bounds.getCenter().lng;
+      const j = await getJSON(url, 15000);
+      if (!j || !j.data) throw new Error('No MRMS data');
+      const meshLayer = L.geoJSON(j.data, {
+        pane: 'warn',
+        style: { color: '#ff8c2a', weight: 1.5, opacity: 0.7, fillColor: '#ff8c2a', fillOpacity: 0.15 },
+        interactive: false
+      }).addTo(map);
+      state.layers.mrmsLayer = meshLayer;
+      setSource('mrms', true, 'MRMS MESH loaded');
+    } catch(e) {
+      setSource('mrms', false, 'MRMS unavailable');
+    }
+  }
+
+  async function loadLSR(){
+    if (!state.layers.lsr) return;
+    try {
+      const url = 'https://mesonet.agron.iastate.edu/geojson/lsr.py?hours=24&wfo=ALL';
+      const j = await getJSON(url, 12000);
+      if (!j || !j.features) throw new Error('No LSR data');
+      const lsrLayer = L.geoJSON(j, {
+        pane: 'marks',
+        pointToLayer: (f, latlng) => L.circleMarker(latlng, {
+          radius: 5, color: '#3ddc84', weight: 1.5, fillColor: '#3ddc84', fillOpacity: 0.6
+        }),
+        onEachFeature: (f, layer) => {
+          const p = f.properties || {};
+          layer.bindTooltip('<b>' + esc(p.typetext || 'LSR') + '</b><br>' + esc(p.city || '') + '<br>' + esc(fmt(p.valid)), {className:'evt-tip', direction:'top', opacity:1});
+        }
+      }).addTo(map);
+      state.layers.lsrLayer = lsrLayer;
+      setSource('lsr', true, (j.features.length + ' LSRs'));
+    } catch(e) {
+      setSource('lsr', false, 'LSR unavailable');
+    }
+  }
+
+  async function loadFEMA(){
+    if (!state.layers.fema) return;
+    try {
+      const url = 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/Hailstorms_in_the_US/FeatureServer/0/query?where=1%3D1&outFields=*&f=geojson';
+      const j = await getJSON(url, 15000);
+      if (!j || !j.features) throw new Error('No FEMA data');
+      const femaLayer = L.geoJSON(j, {
+        pane: 'countyLines',
+        style: { color: '#b18cff', weight: 1, opacity: 0.5, fillColor: '#b18cff', fillOpacity: 0.06 },
+        interactive: false
+      }).addTo(map);
+      state.layers.femaLayer = femaLayer;
+      setSource('fema', true, (j.features.length + ' historical hailstorms'));
+    } catch(e) {
+      setSource('fema', false, 'FEMA unavailable');
+    }
+  }
+
+  function toggleLayer(name, layer){
+    if (!layer) return;
+    if (map.hasLayer(layer)) map.removeLayer(layer);
+    else layer.addTo(map);
   }
 
   /* ================================================================ */
